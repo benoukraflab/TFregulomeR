@@ -43,9 +43,9 @@ setValidity("LocalDatabase", function(object) {
 # helper
 LocalDatabase <- function(address) {
   # set genomeAnnotate files
-  hg38_gene_name <- gsub("/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate/hg38_UCSC_to_GeneName.txt", address)
-  hg38_new_gene_name <- gsub("/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate/hg38_UCSC_to_GeneName_NewVersion.txt", address)
-  mm10_gene_name <- gsub("/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate/mm10_UCSC_to_GeneName.txt", address)
+  hg38_gene_name <- gsub("/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate/hg38_UCSC_to_GeneName.txt.gz", address)
+  hg38_new_gene_name <- gsub("/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate/hg38_UCSC_to_GeneName_NewVersion.txt.gz", address)
+  mm10_gene_name <- gsub("/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate/mm10_UCSC_to_GeneName.txt.gz", address)
 
   new("LocalDatabase", address = address, hg38_gene_name = hg38_gene_name,
     hg38_new_gene_name = hg38_new_gene_name, mm10_gene_name = mm10_gene_name)
