@@ -43,9 +43,24 @@ setValidity("LocalDatabase", function(object) {
 # helper
 LocalDatabase <- function(address) {
   # set genomeAnnotate files
-  hg38_gene_name <- gsub("/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate/hg38_UCSC_to_GeneName.txt.gz", address)
-  hg38_new_gene_name <- gsub("/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate/hg38_UCSC_to_GeneName_NewVersion.txt.gz", address)
-  mm10_gene_name <- gsub("/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate/mm10_UCSC_to_GeneName.txt.gz", address)
+  gene_name_address <- gsub("/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate", address)
+  # added to accommodate the older non-zipped database
+  hg38_gene_name <- file.path(gene_name_address, "hg38_UCSC_to_GeneName.txt")
+  if (!file.exists(hg38_gene_name)) {
+    hg38_gene_name <- paste0(hg38_gene_name, ".gz")
+  }
+  hg38_new_gene_name <- file.path(gene_name_address, "hg38_UCSC_to_GeneName_NewVersion.txt")
+  if (!file.exists(hg38_new_gene_name)) {
+    hg38_new_gene_name <- paste0(hg38_new_gene_name, ".gz")
+  }
+  mm10_gene_name <- file.path(gene_name_address, "mm10_UCSC_to_GeneName.txt")
+  if (!file.exists(mm10_gene_name)) {
+    mm10_gene_name <- paste0(mm10_gene_name, ".gz")
+  }
+  # old remove after test
+  # hg38_gene_name <- gsub("/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate/hg38_UCSC_to_GeneName.txt.gz", address)
+  # hg38_new_gene_name <- gsub("/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate/hg38_UCSC_to_GeneName_NewVersion.txt.gz", address)
+  # mm10_gene_name <- gsub("/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate/mm10_UCSC_to_GeneName.txt.gz", address)
 
   new("LocalDatabase", address = address, hg38_gene_name = hg38_gene_name,
     hg38_new_gene_name = hg38_new_gene_name, mm10_gene_name = mm10_gene_name)
