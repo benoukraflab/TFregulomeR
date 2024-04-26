@@ -43,13 +43,17 @@ setValidity("LocalDatabase", function(object) {
 # helper
 LocalDatabase <- function(address) {
   # set genomeAnnotate files
-  gene_name_address <- gsub("/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate", address)
+  gene_name_address <- gsub(
+    "/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate", address
+  )
   # added to accommodate the older non-zipped database
   hg38_gene_name <- file.path(gene_name_address, "hg38_UCSC_to_GeneName.txt")
   if (!file.exists(hg38_gene_name)) {
     hg38_gene_name <- paste0(hg38_gene_name, ".gz")
   }
-  hg38_new_gene_name <- file.path(gene_name_address, "hg38_UCSC_to_GeneName_NewVersion.txt")
+  hg38_new_gene_name <- file.path(
+    gene_name_address, "hg38_UCSC_to_GeneName_NewVersion.txt"
+  )
   if (!file.exists(hg38_new_gene_name)) {
     hg38_new_gene_name <- paste0(hg38_new_gene_name, ".gz")
   }
@@ -57,20 +61,14 @@ LocalDatabase <- function(address) {
   if (!file.exists(mm10_gene_name)) {
     mm10_gene_name <- paste0(mm10_gene_name, ".gz")
   }
-  # old remove after test
-  # hg38_gene_name <- gsub("/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate/hg38_UCSC_to_GeneName.txt.gz", address)
-  # hg38_new_gene_name <- gsub("/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate/hg38_UCSC_to_GeneName_NewVersion.txt.gz", address)
-  # mm10_gene_name <- gsub("/tfregulome.sqlite", "/TFregulomeR/genomeAnnotate/mm10_UCSC_to_GeneName.txt.gz", address)
 
   new("LocalDatabase", address = address, hg38_gene_name = hg38_gene_name,
-    hg38_new_gene_name = hg38_new_gene_name, mm10_gene_name = mm10_gene_name)
+    hg38_new_gene_name = hg38_new_gene_name, mm10_gene_name = mm10_gene_name
+  )
 }
 
 setMethod("show", "LocalDatabase", function(object) {
-  cat(is(object)[[1]], "\n",
-      "  Address: ", object@address, "\n",
-      sep = ""
-  )
+  cat(is(object)[[1]], "\n", "  Address: ", object@address, "\n", sep = "")
 })
 
 setMethod("apiRequest", "LocalDatabase", function(x, query_index, query_value, id) {
@@ -79,12 +77,20 @@ setMethod("apiRequest", "LocalDatabase", function(x, query_index, query_value, i
 
   # prepare query
   if (!missing(id)) {
-    query <- paste0("SELECT * FROM TFBS_table WHERE UPPER(id)=UPPER('", id, "')")
+    query <- paste0(
+      "SELECT * FROM TFBS_table WHERE UPPER(id)=UPPER('", id, "')"
+    )
   } else if (!missing(query_index) && !missing(query_value)) {
     if (sum(query_index) == 0) {
       query <- "SELECT * FROM TFBS_table"
     } else {
-      query <- paste0("SELECT * FROM TFBS_table WHERE ", paste0("UPPER(", sub("=", ")=UPPER('", query_value[query_index == 1]), "')", collapse = " AND "))
+      query <- paste0(
+        "SELECT * FROM TFBS_table WHERE ", paste0(
+          "UPPER(", sub(
+            "=", ")=UPPER('", query_value[query_index == 1]
+          ), "')", collapse = " AND "
+        )
+      )
     }
   } else {
     stop("Trying to query database without parameters")
@@ -109,23 +115,31 @@ setMethod("apiRequest", "LocalDatabase", function(x, query_index, query_value, i
   if (nrow(results) > 0) {
     results_dir <- paste0(base_dir, "_", results$species, "/", results$organ)
     results$motif_MEME <- paste0(
-      results_dir, "/motif_matrix/", results$motif_MEME)
+      results_dir, "/motif_matrix/", results$motif_MEME
+    )
     results$motif_TRANSFAC <- paste0(
-      results_dir, "/motif_matrix/", results$motif_TRANSFAC)
+      results_dir, "/motif_matrix/", results$motif_TRANSFAC
+    )
     results$beta_score_matrix <- paste0(
-      results_dir, "/beta_score_matrix/", results$beta_score_matrix)
+      results_dir, "/beta_score_matrix/", results$beta_score_matrix
+    )
     results$all_peak_file <- paste0(
-      results_dir, "/TF_all_peaks/", results$all_peak_file)
+      results_dir, "/TF_all_peaks/", results$all_peak_file
+    )
     results$peak_with_motif_file <- paste0(
-      results_dir, "/TF_peaks_with_motif/", results$peak_with_motif_file)
+      results_dir, "/TF_peaks_with_motif/", results$peak_with_motif_file
+    )
     results$DNA_methylation_profile <- paste0(
-      results_dir, "/DNA_methylation_profile/", results$DNA_methylation_profile)
+      results_dir, "/DNA_methylation_profile/", results$DNA_methylation_profile
+    )
     results$DNA_methylation_profile_200bp <- paste0(
       results_dir, "/DNA_methylation_profile_200bp/",
-      results$DNA_methylation_profile_200bp)
+      results$DNA_methylation_profile_200bp
+    )
     results$TFBS <- paste0(results_dir, "/TFBS/", results$TFBS)
     results$Ncor_between_MEME_ChIP_and_HOMER <- as.logical(
-      results$Ncor_between_MEME_ChIP_and_HOMER)
+      results$Ncor_between_MEME_ChIP_and_HOMER
+    )
   }
   return(results)
 })
@@ -174,22 +188,26 @@ WebDatabase <- function(address, server) {
   }
 
   # set genomeAnnotate files
-  gene_name_address <- gsub("api/table_query/", "api/TFregulomeR/genomeAnnotate/", address)
+  gene_name_address <- gsub(
+    "api/table_query/", "api/TFregulomeR/genomeAnnotate/", address
+  )
   hg38_gene_name <- paste0(gene_name_address, "hg38_UCSC_to_GeneName.txt")
-  hg38_new_gene_name <- paste0(gene_name_address, "hg38_UCSC_to_GeneName_NewVersion.txt")
+  hg38_new_gene_name <- paste0(
+    gene_name_address, "hg38_UCSC_to_GeneName_NewVersion.txt"
+  )
   mm10_gene_name <- paste0(gene_name_address, "mm10_UCSC_to_GeneName.txt")
 
   new("WebDatabase", address = address, server = server,
     hg38_gene_name = hg38_gene_name,
     hg38_new_gene_name = hg38_new_gene_name,
-    mm10_gene_name = mm10_gene_name)
+    mm10_gene_name = mm10_gene_name
+  )
 }
 
 setMethod("show", "WebDatabase", function(object) {
-  cat(is(object)[[1]], "\n",
-      "  Address: ", object@address, "\n",
-      "  Server: ", object@server, "\n",
-      sep = ""
+  cat(
+    is(object)[[1]], "\n", "  Address: ", object@address, "\n",
+    "  Server: ", object@server, "\n", sep = ""
   )
 })
 
