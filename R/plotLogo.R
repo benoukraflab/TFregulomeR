@@ -103,7 +103,11 @@ plotLogo <- function(MM_object, logo_type = "entropy", meth_level = "all") {
       )
       colnames(sum_of_pos) <- c("pos", "sum")
       #plot beta score
-      p1 <- ggplot(data = plot_beta_score[order(plot_beta_score$meth, decreasing = FALSE), ], aes(x = pos, y = as.numeric(as.character(plot_beta_score$number)), fill = plot_beta_score$meth)) +
+      plot_data <- plot_beta_score[
+        order(plot_beta_score$meth, decreasing = FALSE),
+      ]
+      plot_data$number <- as.numeric(as.character(plot_beta_score$number))
+      p1 <- ggplot(data = plot_data, aes(x = pos, y = number, fill = meth)) +
         geom_bar(colour = "black", stat = "identity") +
         scale_fill_manual(values = barplot_color) +
         ylim(0, ylim) +
@@ -126,8 +130,8 @@ plotLogo <- function(MM_object, logo_type = "entropy", meth_level = "all") {
           plot.title = element_text(hjust = 0.5, size = 10)
         ) +
         stat_summary(
-          fun.y = sum,
-          aes(label = stat(sum_of_pos$sum), group = pos),
+          fun = sum,
+          aes(label = after_stat(sum_of_pos$sum), group = pos),
           geom = "text",
           vjust = -0.5
         ) +
