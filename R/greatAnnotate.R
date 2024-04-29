@@ -33,203 +33,157 @@ greatAnnotate <- function(peaks, assembly = "hg38", return_annotation = FALSE,
                           request_interval = 60, great_version = "4.0")
 {
   # check input arguments
-  if (missing(peaks))
-  {
+  if (missing(peaks)) {
     stop("please provide peak regions using 'peaks ='!")
   }
-  if (!is.data.frame(peaks))
-  {
+  if (!is.data.frame(peaks)) {
     stop("The 'peaks' should be a BED-format data.frame!")
   }
-  if (!(assembly %in% c("hg38","hg19","mm10","mm9")))
-  {
+  if (!(assembly %in% c("hg38", "hg19", "mm10", "mm9"))) {
     stop("Currently greatAnnotate only supports hg19, hg38, mm9 and mm10.")
   }
-  if (!is.logical(return_annotation))
-  {
+  if (!is.logical(return_annotation)) {
     stop("'return_annotation' should be either TRUE (T) or FALSE (F, default)")
   }
-  if (!is.logical(return_html_report))
-  {
+  if (!is.logical(return_html_report)) {
     stop("'return_html_report' should be either TRUE (T) or FALSE (F, default)")
   }
-  if (!is.numeric(pvalue))
-  {
+  if (!is.numeric(pvalue)) {
     stop("'pvalue' should be a numeric!")
   }
-  if (!(test %in% c("binomial", "hypergeometric")))
-  {
+  if (!(test %in% c("binomial", "hypergeometric"))) {
     stop("'test' should be either 'binomial' (default) or 'hypergeometric'!")
   }
-  if (!(great_rule %in% c("basalPlusExt", "twoClosest", "oneClosest")))
-  {
+  if (!(great_rule %in% c("basalPlusExt", "twoClosest", "oneClosest"))) {
     stop("According to 'rGREAT', 'great_rule' shoule be 'basalPlusExt' (default), 'twoClosest', or 'oneClosest'!")
   }
   # check loaded package
-  if (!("rGREAT" %in% (.packages())))
-  {
+  if (!("rGREAT" %in% (.packages()))) {
     stop("GREAT R package 'rGREAT' (>=1.16.1) is NOT loaded yet!")
   }
-  if (return_html_report==TRUE && !("rbokeh" %in% (.packages())))
-  {
+  if (return_html_report && !("rbokeh" %in% (.packages()))) {
     stop("A dynamic html report requires 'rbokeh' pakcage (>=0.5.0). 'rbokeh' is NOT loaded yet!")
   }
 
   #message
   message("Start greatAnnotate ...")
-  if (return_annotation)
-  {
+  if (return_annotation) {
     message("... ... You chose to return annotated results in a data.frame.")
-  }
-  else
-  {
+  } else {
     message("... ... You chose NOT to return annotated results in a data.frame.")
   }
-  if (return_html_report)
-  {
+  if (return_html_report) {
     message("... ... You chose to return an HTML report.")
-  }
-  else
-  {
+  } else {
     message("... ... You chose NOT to return an HTML report.")
   }
-  if (!return_annotation && ! return_html_report)
-  {
+  if (!return_annotation && ! return_html_report) {
     message("... ... You chose no action. EXIT!!")
     return(NULL)
   }
 
-  peaks <- peaks[,c(1,2,3)]
-  colnames(peaks) <- c("chr","start", "end")
+  peaks <- peaks[, c(1, 2, 3)]
+  colnames(peaks) <- c("chr", "start", "end")
   peaks$id <- paste0("greatAnnotate_peak_", as.vector(rownames(peaks)))
   # great analysis
   message("... ... start GREAT analysis")
-  if (great_rule == "basalPlusExt")
-  {
-    jobs <- rGREAT::submitGreatJob(gr = peaks, species = assembly, rule = great_rule,
-                          adv_upstream = great_adv_upstream, adv_downstream = great_adv_downstream,
-                          adv_span = great_adv_span, request_interval = request_interval, version = great_version)
-  }
-  else if (great_rule == "twoClosest")
-  {
-    jobs <- rGREAT::submitGreatJob(gr = peaks, species = assembly, rule = great_rule,
-                          adv_twoDistance = great_adv_twoDistance, request_interval = request_interval,
-                          version = great_version)
-  }
-  else
-  {
-    jobs <- rGREAT::submitGreatJob(gr = peaks, species = assembly, rule = great_rule,
-                          adv_oneDistance = great_adv_oneDistance, request_interval = request_interval,
-                          version = great_version)
+  if (great_rule == "basalPlusExt") {
+    jobs <- rGREAT::submitGreatJob(
+      gr = peaks, species = assembly, rule = great_rule,
+      adv_upstream = great_adv_upstream, adv_downstream = great_adv_downstream,
+      adv_span = great_adv_span, request_interval = request_interval,
+      version = great_version
+    )
+  } else if (great_rule == "twoClosest") {
+    jobs <- rGREAT::submitGreatJob(
+      gr = peaks, species = assembly, rule = great_rule,
+      adv_twoDistance = great_adv_twoDistance,
+      request_interval = request_interval, version = great_version
+    )
+  } else {
+    jobs <- rGREAT::submitGreatJob(
+      gr = peaks, species = assembly, rule = great_rule,
+      adv_oneDistance = great_adv_oneDistance,
+      request_interval = request_interval, version = great_version
+    )
   }
   tb <- rGREAT::getEnrichmentTables(jobs)
   go_MF <- tb$`GO Molecular Function`
   go_BP <- tb$`GO Biological Process`
   go_CC <- tb$`GO Cellular Component`
-  if (test == "binomial")
-  {
-    if (nrow(go_MF) > 0)
-    {
+  if (test == "binomial") {
+    if (nrow(go_MF) > 0) {
       go_MF_sorted <- go_MF[order(go_MF$Binom_Adjp_BH),]
       go_MF_sorted_pass <- go_MF_sorted[which(go_MF_sorted$Binom_Adjp_BH<pvalue),]
-    }
-    else
-    {
+    } else {
       go_MF_sorted_pass <- go_MF
     }
-    if (nrow(go_BP) > 0)
-    {
+    if (nrow(go_BP) > 0) {
       go_BP_sorted <- go_BP[order(go_BP$Binom_Adjp_BH),]
       go_BP_sorted_pass <- go_BP_sorted[which(go_BP_sorted$Binom_Adjp_BH<pvalue),]
-    }
-    else
-    {
+    } else {
       go_BP_sorted_pass <- go_BP
     }
-    if (nrow(go_CC) > 0)
-    {
+    if (nrow(go_CC) > 0) {
       go_CC_sorted <- go_CC[order(go_CC$Binom_Adjp_BH),]
       go_CC_sorted_pass <- go_CC_sorted[which(go_CC_sorted$Binom_Adjp_BH<pvalue),]
-    }
-    else
-    {
+    } else {
       go_CC_sorted_pass <- go_CC
     }
-  }
-  else
-  {
-    if (nrow(go_MF) > 0)
-    {
+  } else {
+    if (nrow(go_MF) > 0) {
       go_MF_sorted <- go_MF[order(go_MF$Hyper_Adjp_BH),]
       go_MF_sorted_pass <- go_MF_sorted[which(go_MF_sorted$Hyper_Adjp_BH<pvalue),]
-    }
-    else
-    {
+    } else {
       go_MF_sorted_pass <- go_MF
     }
-    if (nrow(go_BP) > 0)
-    {
+    if (nrow(go_BP) > 0) {
       go_BP_sorted <- go_BP[order(go_BP$Hyper_Adjp_BH),]
-      go_BP_sorted_pass <- go_BP_sorted[which(go_BP_sorted$Hyper_Adjp_BH<pvalue),]
-    }
-    else
-    {
+      go_BP_sorted_pass <- go_BP_sorted[
+        which(go_BP_sorted$Hyper_Adjp_BH < pvalue),
+      ]
+    } else {
       go_BP_sorted_pass <- go_BP
     }
-    if (nrow(go_CC) > 0)
-    {
+    if (nrow(go_CC) > 0) {
       go_CC_sorted <- go_CC[order(go_CC$Hyper_Adjp_BH),]
-      go_CC_sorted_pass <- go_CC_sorted[which(go_CC_sorted$Hyper_Adjp_BH<pvalue),]
-    }
-    else
-    {
+      go_CC_sorted_pass <- go_CC_sorted[
+        which(go_CC_sorted$Hyper_Adjp_BH<pvalue),
+      ]
+    } else {
       go_CC_sorted_pass <- go_CC
     }
   }
   # no result for MF?
-  if (nrow(go_MF_sorted_pass) > 0)
-  {
+  if (nrow(go_MF_sorted_pass) > 0) {
     go_MF_sorted_pass$go_id <- "MF"
-  }
-  else
-  {
+  } else {
     go_MF_sorted_pass$go_id <- character(0)
   }
   # no result for BP?
-  if (nrow(go_BP_sorted_pass) > 0)
-  {
+  if (nrow(go_BP_sorted_pass) > 0) {
     go_BP_sorted_pass$go_id <- "BP"
-  }
-  else
-  {
+  } else {
     go_BP_sorted_pass$go_id <- character(0)
   }
   # no result for CC?
-  if (nrow(go_CC_sorted_pass) > 0)
-  {
+  if (nrow(go_CC_sorted_pass) > 0) {
     go_CC_sorted_pass$go_id <- "CC"
-  }
-  else
-  {
+  } else {
     go_CC_sorted_pass$go_id <- character(0)
   }
   all <- rbind(go_MF_sorted_pass, go_BP_sorted_pass, go_CC_sorted_pass)
-  if (nrow(all) == 0){
+  if (nrow(all) == 0) {
     message("... ... No result for the current settings!")
     return(NULL)
-  }
-  else{
-    if (return_html_report)
-    {
-      if (test == "binomial")
-      {
+  } else {
+    if (return_html_report) {
+      if (test == "binomial") {
         all$log10p <- -log10(all$Binom_Adjp_BH)
         all$Term <- all$name
         all$gene_number <- all$Hyper_Observed_Gene_Hits
         all$adjusted_pvalue <- all$Binom_Adjp_BH
-      }
-      else
-      {
+      } else {
         all$log10p <- -log10(all$Hyper_Adjp_BH)
         all$Term <- all$name
         all$gene_number <- all$Hyper_Observed_Gene_Hits
@@ -239,25 +193,26 @@ greatAnnotate <- function(peaks, assembly = "hg38", return_annotation = FALSE,
       write(html_output, "greatAnnotate_result.html")
       message("... ... An html report has been generated as 'greatAnnotate_result.html'!")
     }
-    if (return_annotation)
-    {
-      if (test == "binomial")
-      {
-        all_output <- all[,c("go_id","ID","name","Hyper_Observed_Gene_Hits", "Binom_Adjp_BH")]
+    if (return_annotation) {
+      if (test == "binomial") {
+        all_output <- all[, c(
+          "go_id", "ID", "name", "Hyper_Observed_Gene_Hits", "Binom_Adjp_BH"
+        )]
+      } else {
+        all_output <- all[, c(
+          "go_id", "ID", "name", "Hyper_Observed_Gene_Hits", "Hyper_Adjp_BH"
+        )]
       }
-      else
-      {
-        all_output <- all[,c("go_id", "ID","name","Hyper_Observed_Gene_Hits", "Hyper_Adjp_BH")]
-      }
-      colnames(all_output) <- c("category","ID", "name", "number_of_targeting_genes", "adjusted_pvalue")
+      colnames(all_output) <- c(
+        "category", "ID", "name", "number_of_targeting_genes", "adjusted_pvalue"
+      )
       message("... ... The annotation results have been returned in a data.frame!")
       return(all_output)
     }
   }
 }
 
-hg38Tohg19 <- function(peaks)
-{
+hg38Tohg19 <- function(peaks) {
   GenomeInfoDb::seqlevelsStyle(peaks) <- "UCSC"
   path <- system.file(package="liftOver", "extdata", "hg38ToHg19.over.chain")
   ch <- rtracklayer::import.chain(path)
@@ -265,128 +220,124 @@ hg38Tohg19 <- function(peaks)
   cur19 <- unlist(cur19)
   GenomeInfoDb::genome(cur19) <- "hg19"
   cur19_df <- data.frame(cur19)
-  return(cur19_df[,c("seqnames","start","end","id")])
+  return(cur19_df[, c("seqnames", "start", "end", "id")])
 }
 
-formHTMLoutput <- function(all, test)
-{
-  html_contents_CC <- rbokehPlot(inputdata = all[which(all$go_id=="CC"),], inputtype = "CC")
+formHTMLoutput <- function(all, test) {
+  html_contents_CC <- rbokehPlot(
+    inputdata = all[which(all$go_id == "CC"), ], inputtype = "CC"
+  )
   # print(html_contents_CC)
   write(html_contents_CC, "cc_bokeh_result.html")
   modelid_CC <- html_contents_CC[[1]]
   docid_CC <- html_contents_CC[[2]]
   docs_json_CC <- html_contents_CC[[3]]
-  html_contents_BP <- rbokehPlot(inputdata = all[which(all$go_id=="BP"),], inputtype = "BP")
+  html_contents_BP <- rbokehPlot(
+    inputdata = all[which(all$go_id == "BP"), ], inputtype = "BP"
+  )
   modelid_BP <- html_contents_BP[[1]]
   docid_BP <- html_contents_BP[[2]]
   docs_json_BP <- html_contents_BP[[3]]
-  html_contents_MF <- rbokehPlot(inputdata = all[which(all$go_id=="MF"),], inputtype = "MF")
+  html_contents_MF <- rbokehPlot(
+    inputdata = all[which(all$go_id == "MF"), ], inputtype = "MF"
+  )
   modelid_MF <- html_contents_MF[[1]]
   docid_MF <- html_contents_MF[[2]]
   docs_json_MF <- html_contents_MF[[3]]
 
-  go_BP_sorted_pass <- all[which(all$go_id=="BP"),]
-  go_MF_sorted_pass <- all[which(all$go_id=="MF"),]
-  go_CC_sorted_pass <- all[which(all$go_id=="CC"),]
+  go_BP_sorted_pass <- all[which(all$go_id == "BP"), ]
+  go_MF_sorted_pass <- all[which(all$go_id == "MF"), ]
+  go_CC_sorted_pass <- all[which(all$go_id == "CC"), ]
   table_html <- ""
   table_html <- paste0(table_html, "
         <tbody id='table_BP' style='display:;'>")
-  if (nrow(go_BP_sorted_pass)>0){
-    for (elm in seq(1, nrow(go_BP_sorted_pass), 1)){
-      go_id = go_BP_sorted_pass[elm, "ID"]
-      go_name = go_BP_sorted_pass[elm, "name"]
-      if (test == "binomial")
-      {
-        adj_pvalue = go_BP_sorted_pass[elm, "Binom_Adjp_BH"]
+  if (nrow(go_BP_sorted_pass) > 0) {
+    for (elm in seq(1, nrow(go_BP_sorted_pass), 1)) {
+      go_id <- go_BP_sorted_pass[elm, "ID"]
+      go_name <- go_BP_sorted_pass[elm, "name"]
+      if (test == "binomial") {
+        adj_pvalue <- go_BP_sorted_pass[elm, "Binom_Adjp_BH"]
+      } else {
+        adj_pvalue <- go_BP_sorted_pass[elm, "Hyper_Adjp_BH"]
       }
-      else
-      {
-        adj_pvalue = go_BP_sorted_pass[elm, "Hyper_Adjp_BH"]
-      }
-      number_of_gene = go_BP_sorted_pass[elm, "Hyper_Observed_Gene_Hits"]
+      number_of_gene <- go_BP_sorted_pass[elm, "Hyper_Observed_Gene_Hits"]
       table_html <- paste0(table_html, "
           <tr>
-            <td>", go_id,"</td>
-            <td>", go_name,"</td>
-            <td>", adj_pvalue,"</td>
-            <td>", number_of_gene,"</td>
+            <td>", go_id, "</td>
+            <td>", go_name, "</td>
+            <td>", adj_pvalue, "</td>
+            <td>", number_of_gene, "</td>
           </tr>")
     }
-    } else{
-      table_html <- paste0(table_html, "
-          <tr>
-            <td>No result</td>
-            <td>No result</td>
-            <td>No result</td>
-            <td>No result</td>
-          </tr>")
-    }
+  } else {
+    table_html <- paste0(table_html, "
+        <tr>
+          <td>No result</td>
+          <td>No result</td>
+          <td>No result</td>
+          <td>No result</td>
+        </tr>")
+  }
   table_html <- paste0(table_html, "
         </tbody>
         <tbody id='table_MF' style='display: none;'>")
-  if (nrow(go_MF_sorted_pass)>0){
-    for (elm in seq(1,nrow(go_MF_sorted_pass),1)){
-      go_id = go_MF_sorted_pass[elm, "ID"]
-      go_name = go_MF_sorted_pass[elm, "name"]
-      if (test == "binomial")
-      {
-        adj_pvalue = go_MF_sorted_pass[elm, "Binom_Adjp_BH"]
+  if (nrow(go_MF_sorted_pass) > 0) {
+    for (elm in seq(1, nrow(go_MF_sorted_pass), 1)) {
+      go_id <- go_MF_sorted_pass[elm, "ID"]
+      go_name <- go_MF_sorted_pass[elm, "name"]
+      if (test == "binomial") {
+        adj_pvalue <- go_MF_sorted_pass[elm, "Binom_Adjp_BH"]
+      } else {
+        adj_pvalue <- go_MF_sorted_pass[elm, "Hyper_Adjp_BH"]
       }
-      else
-      {
-        adj_pvalue = go_MF_sorted_pass[elm, "Hyper_Adjp_BH"]
-      }
-      number_of_gene = go_MF_sorted_pass[elm, "Hyper_Observed_Gene_Hits"]
+      number_of_gene <- go_MF_sorted_pass[elm, "Hyper_Observed_Gene_Hits"]
       table_html <- paste0(table_html, "
           <tr>
-            <td>", go_id,"</td>
-            <td>", go_name,"</td>
-            <td>", adj_pvalue,"</td>
-            <td>", number_of_gene,"</td>
+            <td>", go_id, "</td>
+            <td>", go_name, "</td>
+            <td>", adj_pvalue, "</td>
+            <td>", number_of_gene, "</td>
           </tr>")
     }
-    } else{
-      table_html <- paste0(table_html, "
-          <tr>
-            <td>No result</td>
-            <td>No result</td>
-            <td>No result</td>
-            <td>No result</td>
-          </tr>")
-    }
+  } else{
+    table_html <- paste0(table_html, "
+        <tr>
+          <td>No result</td>
+          <td>No result</td>
+          <td>No result</td>
+          <td>No result</td>
+        </tr>")
+  }
   table_html <- paste0(table_html, "
         </tbody>
         <tbody id='table_CC' style='display: none;'>")
-  if (nrow(go_CC_sorted_pass)>0){
-    for (elm in seq(1, nrow(go_CC_sorted_pass), 1)){
-      go_id = go_CC_sorted_pass[elm, "ID"]
-      go_name = go_CC_sorted_pass[elm, "name"]
-      if (test == "binomial")
-      {
-        adj_pvalue = go_CC_sorted_pass[elm, "Binom_Adjp_BH"]
+  if (nrow(go_CC_sorted_pass) > 0) {
+    for (elm in seq(1, nrow(go_CC_sorted_pass), 1)) {
+      go_id <- go_CC_sorted_pass[elm, "ID"]
+      go_name <- go_CC_sorted_pass[elm, "name"]
+      if (test == "binomial") {
+        adj_pvalue <- go_CC_sorted_pass[elm, "Binom_Adjp_BH"]
+      } else {
+        adj_pvalue <- go_CC_sorted_pass[elm, "Hyper_Adjp_BH"]
       }
-      else
-      {
-        adj_pvalue = go_CC_sorted_pass[elm, "Hyper_Adjp_BH"]
-      }
-      number_of_gene = go_CC_sorted_pass[elm, "Hyper_Observed_Gene_Hits"]
+      number_of_gene <- go_CC_sorted_pass[elm, "Hyper_Observed_Gene_Hits"]
       table_html <- paste0(table_html, "
           <tr>
-            <td>", go_id,"</td>
-            <td>", go_name,"</td>
-            <td>", adj_pvalue,"</td>
-            <td>", number_of_gene,"</td>
+            <td>", go_id, "</td>
+            <td>", go_name, "</td>
+            <td>", adj_pvalue, "</td>
+            <td>", number_of_gene, "</td>
           </tr>")
     }
-    } else{
-      table_html <- paste0(table_html, "
-          <tr>
-            <td>No result</td>
-            <td>No result</td>
-            <td>No result</td>
-            <td>No result</td>
-          </tr>")
-    }
+  } else {
+    table_html <- paste0(table_html, "
+        <tr>
+          <td>No result</td>
+          <td>No result</td>
+          <td>No result</td>
+          <td>No result</td>
+        </tr>")
+  }
   table_html <- paste0(table_html, "
         </tbody>")
 
@@ -454,7 +405,7 @@ formHTMLoutput <- function(all, test)
           <th>GO name</th>
           <th>adjusted p-value</th>
           <th>number of targeting genes</th>
-        </thead>", table_html,"
+        </thead>", table_html, "
       </table>
     </div>
   </div>
@@ -463,7 +414,7 @@ formHTMLoutput <- function(all, test)
 <hr align='center' style='width: 80%'>
 <script type='text/javascript'>
 Bokeh.$(function() {
-  ", modelid_BP,"
+  ", modelid_BP, "
   var elementid = 'great_analysis';
   ", docid_BP, "
   ", docs_json_BP, "
@@ -504,7 +455,7 @@ function changeTerm(opt){
   if (opt == 'MF'){
     ", modelid_MF, "
     ", docid_MF, "
-    ", docs_json_MF,"
+    ", docs_json_MF, "
   }
   if (opt=='BP'){
     ", modelid_BP, "
@@ -591,71 +542,72 @@ function exportTableToCSV(filename) {
   return(output_html)
 }
 
-rbokehPlot <- function(inputdata, inputtype)
-{
-  if (inputtype == "BP")
-  {
-    col = "blue"
+rbokehPlot <- function(inputdata, inputtype) {
+  if (inputtype == "BP") {
+    col <- "blue"
+  } else if (inputtype == "MF") {
+    col <- "red"
+  } else {
+    col <- "green"
   }
-  else if (inputtype == "MF")
-  {
-    col = "red"
-  }
-  else
-  {
-    col = "green"
-  }
-  if (nrow(inputdata)==0)
-  {
-    html_contents <- list("var modelid = '';", "var docid = '';", "var docs_json = null;")
+  if (nrow(inputdata) == 0) {
+    html_contents <- list(
+      "var modelid = '';", "var docid = '';", "var docs_json = null;"
+    )
     return(html_contents)
-  }
-  else
-  {
-    p <- suppressWarnings(rbokeh::figure(xgrid = FALSE, ygrid = FALSE, xaxes = "below",yaxes = "left",
-                                         width = 500, height = 500, title = "GREAT analysis",
-                                         ylab = "Number of genes",xlab = "-log10(adjusted p-value)",
-                                         logo = NULL, tools = c( "pan", "wheel_zoom", "box_zoom",
-                                                                 "reset"))
-                          %>% rbokeh::ly_points(data=inputdata,
-                                                x = inputdata$log10p,
-                                                y = inputdata$Hyper_Observed_Gene_Hits,
-                                                color = col,
-                                                alpha = 0.5,
-                                                size = 10,
-                                                hover = list(inputdata$Term,
-                                                             inputdata$adjusted_pvalue,
-                                                             inputdata$gene_number)))
-    suppressMessages(suppressWarnings(rbokeh::rbokeh2html(p, file = "rbokeh_temp.html")))
+  } else {
+    p <- suppressWarnings(
+      rbokeh::figure(
+        xgrid = FALSE, ygrid = FALSE,
+        xaxes = "below", yaxes = "left",
+        width = 500, height = 500,
+        title = "GREAT analysis",
+        ylab = "Number of genes", xlab = "-log10(adjusted p-value)",
+        logo = NULL,
+        tools = c("pan", "wheel_zoom", "box_zoom", "reset")
+      )
+      %>% rbokeh::ly_points(
+        data = inputdata,
+        x = inputdata$log10p,
+        y = inputdata$Hyper_Observed_Gene_Hits,
+        color = col,
+        alpha = 0.5,
+        size = 10,
+        hover = list(
+          inputdata$Term, inputdata$adjusted_pvalue, inputdata$gene_number
+        )
+      )
+    )
+    suppressMessages(
+      suppressWarnings(rbokeh::rbokeh2html(p, file = "rbokeh_temp.html"))
+    )
     html_contents <- get_html_content("rbokeh_temp.html")
     file.remove("rbokeh_temp.html")
     return(html_contents)
   }
 }
 
-get_html_content <- function(filename){
-  index_html = file(filename, "r")
-  modelid = ""
-  docid = ""
-  docs_json = ""
-  while (TRUE){
-    line = readLines(index_html, n=1, warn = FALSE)
-    if ( length(line) == 0 ) {
+get_html_content <- function(filename) {
+  index_html <- file(filename, "r")
+  modelid <- ""
+  docid <- ""
+  docs_json <- ""
+  while (TRUE) {
+    line <- readLines(index_html, n = 1, warn = FALSE)
+    if (length(line) == 0) {
       break
     }
-    line = trimws(line)
-    if(startsWith(line, "var modelid")){
-      modelid = gsub("[\r\n]", "", line)
+    line <- trimws(line)
+    if (startsWith(line, "var modelid")) {
+      modelid <- gsub("[\r\n]", "", line)
     }
-    if(startsWith(line, "var docid")){
-      docid = gsub("[\r\n]", "", line)
+    if (startsWith(line, "var docid")) {
+      docid <- gsub("[\r\n]", "", line)
     }
-    if(startsWith(line, "var docs_json")){
-      docs_json = gsub("[\r\n]", "", line)
+    if (startsWith(line, "var docs_json")) {
+      docs_json <- gsub("[\r\n]", "", line)
     }
   }
   close(index_html)
   return(list(modelid, docid, docs_json))
 }
-
-
