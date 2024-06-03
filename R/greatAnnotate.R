@@ -1,6 +1,6 @@
 #' greatAnnotate
 #'
-#' This function allows you to analyse the gene ontologies of targeting genes by cis-regulatory regions.
+#' This function allows you to analyze the gene ontologies of targeting genes by cis-regulatory regions.
 #' @param peaks Required. A bed-format genomic regions in data frame.
 #' @param assembly The genome assembly of the input regions, currently supporting 'hg19', 'hg38' (default), 'mm9' and 'mm10'.
 #' @param return_annotation Either TRUE of FALSE (default). If TRUE, a data.frame containing annotation results will be returned.
@@ -14,7 +14,7 @@
 #' @param great_adv_twoDistance Equivalent to the rGREAT input 'adv_twoDistance' (region range to be considered). Only applicable when 'great_rule' is  'twoClosest', by default 1000.0 (kb).
 #' @param great_adv_oneDistance Equivalent to the rGREAT input 'adv_oneDistance' (region range to be considered). Only applicable when 'great_rule' is  'oneClosest', by default 1000.0 (kb).
 #' @param request_interval The minimal gap time between two requests using greatAnnotate, by default 60 (s).
-#' @param great_version Equivalent to the rGREAT input 'version', by default 4.0.
+#' @param great_version Equivalent to the rGREAT input 'version', by default 4.0.4
 #' @return  a data.frame, or an HTML report depending on the options.
 #' @keywords greatAnnotate
 #' @export
@@ -22,16 +22,27 @@
 #' require(rGREAT)
 #' require(rbokeh)
 #' K562_CEBPB_regions <- loadPeaks(id = "MM1_HSA_K562_CEBPB")
-#' K562_CEBPB_regions_annotation <- greatAnnotate(peaks = K562_CEBPB_regions[1:500,],
-#'                              return_annotation = TRUE, return_html_report = TRUE)
+#' K562_CEBPB_regions_annotation <- greatAnnotate(
+#'   peaks = K562_CEBPB_regions[1:500, ],
+#'   return_annotation = TRUE,
+#'   return_html_report = TRUE
+#' )
 
-greatAnnotate <- function(peaks, assembly = "hg38", return_annotation = FALSE,
-                          return_html_report = FALSE, pvalue = 0.01, test = "binomial",
-                          great_rule = "basalPlusExt", great_adv_upstream = 5.0,
-                          great_adv_downstream = 1.0, great_adv_span = 1000.0,
-                          great_adv_twoDistance = 1000.0, great_adv_oneDistance = 1000.0,
-                          request_interval = 60, great_version = "4.0")
-{
+greatAnnotate <- function(
+  peaks, assembly = "hg38",
+  return_annotation = FALSE,
+  return_html_report = FALSE,
+  pvalue = 0.01,
+  test = "binomial",
+  great_rule = "basalPlusExt",
+  great_adv_upstream = 5.0,
+  great_adv_downstream = 1.0,
+  great_adv_span = 1000.0,
+  great_adv_twoDistance = 1000.0,
+  great_adv_oneDistance = 1000.0,
+  request_interval = 60,
+  great_version = "4.0.4"
+) {
   # check input arguments
   if (missing(peaks)) {
     stop("please provide peak regions using 'peaks ='!")
@@ -61,9 +72,9 @@ greatAnnotate <- function(peaks, assembly = "hg38", return_annotation = FALSE,
   if (!("rGREAT" %in% (.packages()))) {
     stop("GREAT R package 'rGREAT' (>=1.16.1) is NOT loaded yet!")
   }
-  if (return_html_report && !("rbokeh" %in% (.packages()))) {
-    stop("A dynamic html report requires 'rbokeh' pakcage (>=0.5.0). 'rbokeh' is NOT loaded yet!")
-  }
+  # if (return_html_report && !("rbokeh" %in% (.packages()))) {
+  #   stop("A dynamic html report requires 'rbokeh' pakcage (>=0.5.0). 'rbokeh' is NOT loaded yet!")
+  # }
 
   #message
   message("Start greatAnnotate ...")
@@ -88,526 +99,168 @@ greatAnnotate <- function(peaks, assembly = "hg38", return_annotation = FALSE,
   # great analysis
   message("... ... start GREAT analysis")
   if (great_rule == "basalPlusExt") {
-    jobs <- rGREAT::submitGreatJob(
+    jobs <- suppressMessages(rGREAT::submitGreatJob(
       gr = peaks, species = assembly, rule = great_rule,
       adv_upstream = great_adv_upstream, adv_downstream = great_adv_downstream,
       adv_span = great_adv_span, request_interval = request_interval,
       version = great_version
-    )
+    ))
   } else if (great_rule == "twoClosest") {
-    jobs <- rGREAT::submitGreatJob(
+    jobs <- suppressMessages(rGREAT::submitGreatJob(
       gr = peaks, species = assembly, rule = great_rule,
       adv_twoDistance = great_adv_twoDistance,
       request_interval = request_interval, version = great_version
-    )
+    ))
   } else {
-    jobs <- rGREAT::submitGreatJob(
+    jobs <- suppressMessages(rGREAT::submitGreatJob(
       gr = peaks, species = assembly, rule = great_rule,
       adv_oneDistance = great_adv_oneDistance,
       request_interval = request_interval, version = great_version
-    )
+    ))
   }
-  tb <- rGREAT::getEnrichmentTables(jobs)
-  go_MF <- tb$`GO Molecular Function`
-  go_BP <- tb$`GO Biological Process`
-  go_CC <- tb$`GO Cellular Component`
-  if (test == "binomial") {
-    if (nrow(go_MF) > 0) {
-      go_MF_sorted <- go_MF[order(go_MF$Binom_Adjp_BH),]
-      go_MF_sorted_pass <- go_MF_sorted[which(go_MF_sorted$Binom_Adjp_BH<pvalue),]
+
+  message("... ... getting enrichment tables")
+  tb <- suppressMessages(rGREAT::getEnrichmentTables(jobs))
+  handle_enrichment_table <- function(gene_set, test, pvalue) {
+    go_tb <- tb[[gene_set]]
+    if (test == "binomial") {
+      go_tb <- go_tb %>%
+        dplyr::select(ID, name, Hyper_Observed_Gene_Hits, Binom_Adjp_BH) %>%
+        dplyr::rename(p_adjust = Binom_Adjp_BH)
     } else {
-      go_MF_sorted_pass <- go_MF
+      go_tb <- go_tb %>%
+        dplyr::select(ID, name, Hyper_Observed_Gene_Hits, Hyper_Adjp_BH) %>%
+        dplyr::rename(p_adjust = Hyper_Adjp_BH)
     }
-    if (nrow(go_BP) > 0) {
-      go_BP_sorted <- go_BP[order(go_BP$Binom_Adjp_BH),]
-      go_BP_sorted_pass <- go_BP_sorted[which(go_BP_sorted$Binom_Adjp_BH<pvalue),]
-    } else {
-      go_BP_sorted_pass <- go_BP
-    }
-    if (nrow(go_CC) > 0) {
-      go_CC_sorted <- go_CC[order(go_CC$Binom_Adjp_BH),]
-      go_CC_sorted_pass <- go_CC_sorted[which(go_CC_sorted$Binom_Adjp_BH<pvalue),]
-    } else {
-      go_CC_sorted_pass <- go_CC
-    }
-  } else {
-    if (nrow(go_MF) > 0) {
-      go_MF_sorted <- go_MF[order(go_MF$Hyper_Adjp_BH),]
-      go_MF_sorted_pass <- go_MF_sorted[which(go_MF_sorted$Hyper_Adjp_BH<pvalue),]
-    } else {
-      go_MF_sorted_pass <- go_MF
-    }
-    if (nrow(go_BP) > 0) {
-      go_BP_sorted <- go_BP[order(go_BP$Hyper_Adjp_BH),]
-      go_BP_sorted_pass <- go_BP_sorted[
-        which(go_BP_sorted$Hyper_Adjp_BH < pvalue),
-      ]
-    } else {
-      go_BP_sorted_pass <- go_BP
-    }
-    if (nrow(go_CC) > 0) {
-      go_CC_sorted <- go_CC[order(go_CC$Hyper_Adjp_BH),]
-      go_CC_sorted_pass <- go_CC_sorted[
-        which(go_CC_sorted$Hyper_Adjp_BH<pvalue),
-      ]
-    } else {
-      go_CC_sorted_pass <- go_CC
-    }
+    go_tb_sorted_pass <- go_tb %>%
+      dplyr::arrange(p_adjust) %>%
+      dplyr::filter(p_adjust < pvalue) %>%
+      dplyr::mutate(go_id = substring(gene_set, first = 4)) %>%
+      dplyr::select(go_id, dplyr::everything())
+    go_tb_sorted_pass
   }
-  # no result for MF?
-  if (nrow(go_MF_sorted_pass) > 0) {
-    go_MF_sorted_pass$go_id <- "MF"
-  } else {
-    go_MF_sorted_pass$go_id <- character(0)
-  }
-  # no result for BP?
-  if (nrow(go_BP_sorted_pass) > 0) {
-    go_BP_sorted_pass$go_id <- "BP"
-  } else {
-    go_BP_sorted_pass$go_id <- character(0)
-  }
-  # no result for CC?
-  if (nrow(go_CC_sorted_pass) > 0) {
-    go_CC_sorted_pass$go_id <- "CC"
-  } else {
-    go_CC_sorted_pass$go_id <- character(0)
-  }
-  all <- rbind(go_MF_sorted_pass, go_BP_sorted_pass, go_CC_sorted_pass)
+
+  filtered_tb <- lapply(
+    names(tb), handle_enrichment_table, test = test, pvalue = pvalue
+  )
+
+  all <- do.call(rbind, filtered_tb)
   if (nrow(all) == 0) {
     message("... ... No result for the current settings!")
     return(NULL)
   } else {
     if (return_html_report) {
-      if (test == "binomial") {
-        all$log10p <- -log10(all$Binom_Adjp_BH)
-        all$Term <- all$name
-        all$gene_number <- all$Hyper_Observed_Gene_Hits
-        all$adjusted_pvalue <- all$Binom_Adjp_BH
-      } else {
-        all$log10p <- -log10(all$Hyper_Adjp_BH)
-        all$Term <- all$name
-        all$gene_number <- all$Hyper_Observed_Gene_Hits
-        all$adjusted_pvalue <- all$Hyper_Adjp_BH
-      }
-      html_output <- formHTMLoutput(all, test)
-      write(html_output, "greatAnnotate_result.html")
-      message("... ... An html report has been generated as 'greatAnnotate_result.html'!")
+      formatted_time <- format(Sys.time(), "%Y-%m-%d_%H:%M:%S")
+      report_prefix <- paste0("greatAnnotate_result-", formatted_time)
+      report_name <- paste0(report_prefix, ".html")
+
+      html_output <- formHTMLoutput(all, report_prefix)
+
+      htmltools::save_html(html_output, report_name)
+      message(paste0(
+        "... ... An html report has been generated as '", report_name, "'!"
+      ))
     }
     if (return_annotation) {
-      if (test == "binomial") {
-        all_output <- all[, c(
-          "go_id", "ID", "name", "Hyper_Observed_Gene_Hits", "Binom_Adjp_BH"
-        )]
-      } else {
-        all_output <- all[, c(
-          "go_id", "ID", "name", "Hyper_Observed_Gene_Hits", "Hyper_Adjp_BH"
-        )]
-      }
-      colnames(all_output) <- c(
+      colnames(all) <- c(
         "category", "ID", "name", "number_of_targeting_genes", "adjusted_pvalue"
       )
-      message("... ... The annotation results have been returned in a data.frame!")
-      return(all_output)
-    }
-  }
-}
-
-hg38Tohg19 <- function(peaks) {
-  GenomeInfoDb::seqlevelsStyle(peaks) <- "UCSC"
-  path <- system.file(package="liftOver", "extdata", "hg38ToHg19.over.chain")
-  ch <- rtracklayer::import.chain(path)
-  cur19 <- suppressWarnings(rtracklayer::liftOver(peaks, ch))
-  cur19 <- unlist(cur19)
-  GenomeInfoDb::genome(cur19) <- "hg19"
-  cur19_df <- data.frame(cur19)
-  return(cur19_df[, c("seqnames", "start", "end", "id")])
-}
-
-formHTMLoutput <- function(all, test) {
-  html_contents_CC <- rbokehPlot(
-    inputdata = all[which(all$go_id == "CC"), ], inputtype = "CC"
-  )
-  # print(html_contents_CC)
-  write(html_contents_CC, "cc_bokeh_result.html")
-  modelid_CC <- html_contents_CC[[1]]
-  docid_CC <- html_contents_CC[[2]]
-  docs_json_CC <- html_contents_CC[[3]]
-  html_contents_BP <- rbokehPlot(
-    inputdata = all[which(all$go_id == "BP"), ], inputtype = "BP"
-  )
-  modelid_BP <- html_contents_BP[[1]]
-  docid_BP <- html_contents_BP[[2]]
-  docs_json_BP <- html_contents_BP[[3]]
-  html_contents_MF <- rbokehPlot(
-    inputdata = all[which(all$go_id == "MF"), ], inputtype = "MF"
-  )
-  modelid_MF <- html_contents_MF[[1]]
-  docid_MF <- html_contents_MF[[2]]
-  docs_json_MF <- html_contents_MF[[3]]
-
-  go_BP_sorted_pass <- all[which(all$go_id == "BP"), ]
-  go_MF_sorted_pass <- all[which(all$go_id == "MF"), ]
-  go_CC_sorted_pass <- all[which(all$go_id == "CC"), ]
-  table_html <- ""
-  table_html <- paste0(table_html, "
-        <tbody id='table_BP' style='display:;'>")
-  if (nrow(go_BP_sorted_pass) > 0) {
-    for (elm in seq(1, nrow(go_BP_sorted_pass), 1)) {
-      go_id <- go_BP_sorted_pass[elm, "ID"]
-      go_name <- go_BP_sorted_pass[elm, "name"]
-      if (test == "binomial") {
-        adj_pvalue <- go_BP_sorted_pass[elm, "Binom_Adjp_BH"]
-      } else {
-        adj_pvalue <- go_BP_sorted_pass[elm, "Hyper_Adjp_BH"]
-      }
-      number_of_gene <- go_BP_sorted_pass[elm, "Hyper_Observed_Gene_Hits"]
-      table_html <- paste0(table_html, "
-          <tr>
-            <td>", go_id, "</td>
-            <td>", go_name, "</td>
-            <td>", adj_pvalue, "</td>
-            <td>", number_of_gene, "</td>
-          </tr>")
-    }
-  } else {
-    table_html <- paste0(table_html, "
-        <tr>
-          <td>No result</td>
-          <td>No result</td>
-          <td>No result</td>
-          <td>No result</td>
-        </tr>")
-  }
-  table_html <- paste0(table_html, "
-        </tbody>
-        <tbody id='table_MF' style='display: none;'>")
-  if (nrow(go_MF_sorted_pass) > 0) {
-    for (elm in seq(1, nrow(go_MF_sorted_pass), 1)) {
-      go_id <- go_MF_sorted_pass[elm, "ID"]
-      go_name <- go_MF_sorted_pass[elm, "name"]
-      if (test == "binomial") {
-        adj_pvalue <- go_MF_sorted_pass[elm, "Binom_Adjp_BH"]
-      } else {
-        adj_pvalue <- go_MF_sorted_pass[elm, "Hyper_Adjp_BH"]
-      }
-      number_of_gene <- go_MF_sorted_pass[elm, "Hyper_Observed_Gene_Hits"]
-      table_html <- paste0(table_html, "
-          <tr>
-            <td>", go_id, "</td>
-            <td>", go_name, "</td>
-            <td>", adj_pvalue, "</td>
-            <td>", number_of_gene, "</td>
-          </tr>")
-    }
-  } else{
-    table_html <- paste0(table_html, "
-        <tr>
-          <td>No result</td>
-          <td>No result</td>
-          <td>No result</td>
-          <td>No result</td>
-        </tr>")
-  }
-  table_html <- paste0(table_html, "
-        </tbody>
-        <tbody id='table_CC' style='display: none;'>")
-  if (nrow(go_CC_sorted_pass) > 0) {
-    for (elm in seq(1, nrow(go_CC_sorted_pass), 1)) {
-      go_id <- go_CC_sorted_pass[elm, "ID"]
-      go_name <- go_CC_sorted_pass[elm, "name"]
-      if (test == "binomial") {
-        adj_pvalue <- go_CC_sorted_pass[elm, "Binom_Adjp_BH"]
-      } else {
-        adj_pvalue <- go_CC_sorted_pass[elm, "Hyper_Adjp_BH"]
-      }
-      number_of_gene <- go_CC_sorted_pass[elm, "Hyper_Observed_Gene_Hits"]
-      table_html <- paste0(table_html, "
-          <tr>
-            <td>", go_id, "</td>
-            <td>", go_name, "</td>
-            <td>", adj_pvalue, "</td>
-            <td>", number_of_gene, "</td>
-          </tr>")
-    }
-  } else {
-    table_html <- paste0(table_html, "
-        <tr>
-          <td>No result</td>
-          <td>No result</td>
-          <td>No result</td>
-          <td>No result</td>
-        </tr>")
-  }
-  table_html <- paste0(table_html, "
-        </tbody>")
-
-  output_html <- paste0("<!DOCTYPE html>
-<html>
-<head>
-  <script src='https://code.jquery.com/jquery-3.2.1.min.js' ></script>
-  <script src='https://cdn.pydata.org/bokeh/release/bokeh-0.12.2.min.js'></script>
-  <link href='https://cdn.pydata.org/bokeh/release/bokeh-0.12.2.min.css' rel='stylesheet'>
-  <link rel='stylesheet' href='https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css'>
-  <style>
-    /* width */
-    ::-webkit-scrollbar {
-      width: 10px;
-    }
-
-    /* Track */
-    ::-webkit-scrollbar-track {
-      background: #f1f1f1;
-    }
-
-    /* Handle */
-    ::-webkit-scrollbar-thumb {
-      background: #888;
-    }
-
-    /* Handle on hover */
-    ::-webkit-scrollbar-thumb:hover {
-      background: #555;
-    }
-  </style>
-</head>
-<body>
-<div align='center'>
-  <h4>TFregulomeR - GreatAnnotate Result</h4>
-</div>
-<hr align='center' style='width: 80%'>
-<br>
-<div align='center'>
-  Figure - Gene ontology analyses of targeting genes:
-  <select id='change_go_term' onchange='changeTerm(this.value)'>
-    <option value='BP' selected>Biological Process</option>
-    <option value='MF'>Molecular Fcuntion</option>
-    <option value='CC'>Cellular Component</option>
-  </select>
-</div>
-<div id='great_result' align='center'>
-  <div class='bk-root' class='plotdiv' style=' width: 500px; height: 500px;' align='left'>
-    <div id='great_analysis' class='plotdiv' ></div>
-  </div>
-</div>
-<div class='container' align='center'>
-  <br>
-  Table - Gene ontology analyses of targeting genes: <select id='change_go_term' onchange='changeTermTable(this.value)'>
-    <option value='BP' selected>Biological Process</option>
-    <option value='MF'>Molecular Fcuntion</option>
-    <option value='CC'>Cellular Component</option>
-  </select>
-  <button type='button' class='btn btn-primary btn-sm' onclick=\"exportTableToCSV('greatAnnotate_results.csv')\">Export All To CSV File</button>
-  <div class='row' style='width:90%;height:400px;overflow:auto;'>
-    <div class='table-responsive'>
-      <table class='table table-bordred table-striped'>
-        <thead>
-          <th>GO ID</th>
-          <th>GO name</th>
-          <th>adjusted p-value</th>
-          <th>number of targeting genes</th>
-        </thead>", table_html, "
-      </table>
-    </div>
-  </div>
-</div>
-<br>
-<hr align='center' style='width: 80%'>
-<script type='text/javascript'>
-Bokeh.$(function() {
-  ", modelid_BP, "
-  var elementid = 'great_analysis';
-  ", docid_BP, "
-  ", docs_json_BP, "
-  var refkey = Object.keys(docs_json)[0]
-  var refs = docs_json[refkey].roots.references
-  function traverseObject(obj) {
-    for (var key in obj) {
-      if (obj[key].constructor === Object) {
-        traverseObject(obj[key]);
-      } else if (obj[key].constructor === Array) {
-        for (var i = 0; i < obj[key].length; i++) {
-          if (obj[key][i] === null)
-          obj[key][i] = NaN;
-        };
-      }
-    };
-  }
-  for (var i = 0; i < refs.length; i++) {
-    if (refs[i].type === 'ColumnDataSource')
-      traverseObject(refs[i].attributes.data);
-  };
-  var render_items = [{
-    'docid': docid,
-    'elementid': elementid,
-    'modelid': modelid
-  }];
-  Bokeh.set_log_level('info');
-  Bokeh.embed.embed_items(docs_json, render_items);
-});
-function changeTerm(opt){
-  $('#great_result').html(\"<div class='bk-root' class='plotdiv' style=' width: 500px; height: 500px;' align='left'><div id='great_analysis' class='plotdiv'></div>\");
-  var elementid = 'great_analysis';
-  if (opt == 'CC'){
-    ", modelid_CC, "
-    ", docid_CC, "
-    ", docs_json_CC, "
-  }
-  if (opt == 'MF'){
-    ", modelid_MF, "
-    ", docid_MF, "
-    ", docs_json_MF, "
-  }
-  if (opt=='BP'){
-    ", modelid_BP, "
-    ", docid_BP, "
-    ", docs_json_BP, "
-  }
-  var refkey = Object.keys(docs_json)[0]
-  var refs = docs_json[refkey].roots.references
-  function traverseObject(obj) {
-    for (var key in obj) {
-      if (obj[key].constructor === Object) {
-        traverseObject(obj[key]);
-      } else if (obj[key].constructor === Array) {
-        for (var i = 0; i < obj[key].length; i++) {
-          if (obj[key][i] === null)
-            obj[key][i] = NaN;
-        };
-      }
-    };
-  }
-  for (var i = 0; i < refs.length; i++) {
-    if (refs[i].type === 'ColumnDataSource')
-      traverseObject(refs[i].attributes.data);
-  };
-  var render_items = [{
-    'docid': docid,
-    'elementid': elementid,
-    'modelid': modelid
-  }];
-  Bokeh.set_log_level('info');
-  Bokeh.embed.embed_items(docs_json, render_items);
-}
-
-function changeTermTable(opt){
-  if (opt == 'BP'){
-    $('#table_BP').css('display', '');
-    $('#table_MF').css('display', 'none');
-    $('#table_CC').css('display', 'none');
-  }
-  if (opt == 'MF'){
-    $('#table_BP').css('display', 'none');
-    $('#table_MF').css('display', '');
-    $('#table_CC').css('display', 'none');
-  }
-  if (opt == 'CC'){
-    $('#table_BP').css('display', 'none');
-    $('#table_MF').css('display', 'none');
-    $('#table_CC').css('display', '');
-  }
-}
-function downloadCSV(csv, filename) {
-    var csvFile;
-    var downloadLink;
-    // CSV file
-    csvFile = new Blob([csv], {type: 'text/csv'});
-    // Download link
-    downloadLink = document.createElement('a');
-    // File name
-    downloadLink.download = filename;
-    // Create a link to the file
-    downloadLink.href = window.URL.createObjectURL(csvFile);
-    // Hide download link
-    downloadLink.style.display = 'none';
-    // Add the link to DOM
-    document.body.appendChild(downloadLink);
-    // Click download link
-    downloadLink.click();
-}
-function exportTableToCSV(filename) {
-    var csv = [];
-    var rows = document.querySelectorAll('table tr');
-    for (var i = 0; i < rows.length; i++) {
-      var row = [], cols = rows[i].querySelectorAll('td, th');
-      for (var j = 0; j < cols.length; j++)
-      row.push(cols[j].innerText);
-      csv.push(row.join(','));
-    }
-    // Download CSV file
-    downloadCSV(csv.join('\\n'), filename);
-}
-</script>
-</body>
-</html>")
-  return(output_html)
-}
-
-rbokehPlot <- function(inputdata, inputtype) {
-  if (inputtype == "BP") {
-    col <- "blue"
-  } else if (inputtype == "MF") {
-    col <- "red"
-  } else {
-    col <- "green"
-  }
-  if (nrow(inputdata) == 0) {
-    html_contents <- list(
-      "var modelid = '';", "var docid = '';", "var docs_json = null;"
-    )
-    return(html_contents)
-  } else {
-    p <- suppressWarnings(
-      rbokeh::figure(
-        xgrid = FALSE, ygrid = FALSE,
-        xaxes = "below", yaxes = "left",
-        width = 500, height = 500,
-        title = "GREAT analysis",
-        ylab = "Number of genes", xlab = "-log10(adjusted p-value)",
-        logo = NULL,
-        tools = c("pan", "wheel_zoom", "box_zoom", "reset")
+      message(
+        "... ... The annotation results have been returned in a data.frame!"
       )
-      %>% rbokeh::ly_points(
-        data = inputdata,
-        x = inputdata$log10p,
-        y = inputdata$Hyper_Observed_Gene_Hits,
-        color = col,
-        alpha = 0.5,
-        size = 10,
-        hover = list(
-          inputdata$Term, inputdata$adjusted_pvalue, inputdata$gene_number
+      return(all)
+    }
+  }
+}
+
+formHTMLoutput <- function(all, report_prefix) {
+  colnames(all) <- c(
+    "go_id", "id", "description", "observed_gene_hits", "p_adjust"
+  )
+  # required to get crosstalk between scatter plot and table
+  shared_all <- crosstalk::SharedData$new(all)
+
+  plot <- ggplot2::ggplot(
+    shared_all,
+    ggplot2::aes(
+      x = -log10(p_adjust),
+      y = observed_gene_hits,
+      color = go_id,
+      label1 = description,
+      label2 = p_adjust,
+      label3 = observed_gene_hits
+    )
+  ) +
+    ggplot2::geom_point(size = 3) +
+    ggplot2::labs(
+      # title = "GREAT analysis",
+      x = "-log10(adjusted p-value)",
+      y = "Number of genes",
+      color = "GO Geneset"
+    ) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(legend.position = "none")
+
+  # plotly offers the interactive functionality on top of a ggplot
+  plotly_plot <- plotly::ggplotly(
+    plot,
+    tooltip = c("label1", "label2", "label3"),
+    height = 600, width = 600
+  )
+
+  filter_bar <- crosstalk::filter_checkbox(
+    "go_id", "Go Geneset", shared_all, ~go_id, inline = TRUE
+  )
+
+  dt_table <- DT::datatable(
+    shared_all,
+    width = "100%",
+    rownames = FALSE,
+    extensions = "Buttons",
+    options = list(
+      dom = "Bfrtip",
+      pageLength = 25,
+      buttons = list(
+        "copy",
+        list(
+          extend = "collection",
+          buttons = list(
+            list(extend = "csv", title = report_prefix),
+            list(extend = "excel", title = report_prefix)
+          ),
+          text = "Download"
         )
       )
     )
-    suppressMessages(
-      suppressWarnings(rbokeh::rbokeh2html(p, file = "rbokeh_temp.html"))
-    )
-    html_contents <- get_html_content("rbokeh_temp.html")
-    file.remove("rbokeh_temp.html")
-    return(html_contents)
-  }
-}
+  )
 
-get_html_content <- function(filename) {
-  index_html <- file(filename, "r")
-  modelid <- ""
-  docid <- ""
-  docs_json <- ""
-  while (TRUE) {
-    line <- readLines(index_html, n = 1, warn = FALSE)
-    if (length(line) == 0) {
-      break
-    }
-    line <- trimws(line)
-    if (startsWith(line, "var modelid")) {
-      modelid <- gsub("[\r\n]", "", line)
-    }
-    if (startsWith(line, "var docid")) {
-      docid <- gsub("[\r\n]", "", line)
-    }
-    if (startsWith(line, "var docs_json")) {
-      docs_json <- gsub("[\r\n]", "", line)
-    }
-  }
-  close(index_html)
-  return(list(modelid, docid, docs_json))
+  base_css <- "display: flex; justify-content: center; align-items: center;"
+
+  html_page <- htmltools::tagList(
+    htmltools::tags$head(htmltools::tags$title("Crosstalk Example")),
+    htmltools::tags$body(
+      htmltools::tags$div(
+        style = paste0("flex-direction: column; ", base_css),
+        htmltools::tags$h2("TFregulomeR - GreatAnnotate Result"),
+        htmltools::tags$div(
+          style = base_css,
+          htmltools::tags$h3("Figure - Gene ontology analysis")
+        ),
+        htmltools::tags$div(style = base_css, plotly_plot),
+        htmltools::tags$div(
+          style = paste0("width: 75%; margin-top: 20px; ", base_css),
+          filter_bar
+        ),
+        htmltools::tags$div(
+          style = base_css,
+          htmltools::tags$h3(
+            "Table - Gene ontology analysis of targeting genes"
+          )
+        ),
+        htmltools::tags$div(style = "width: 75%;", dt_table)
+      )
+    )
+  )
+
+  return(html_page)
 }
