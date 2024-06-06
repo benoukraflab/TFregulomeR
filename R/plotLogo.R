@@ -28,11 +28,11 @@ plotLogo <- function(MM_object, logo_type = "entropy", meth_level = "all") {
     stop("Please check your input argument 'meth_level'! Please choose one of 'all' (default), 'methylated' or 'unmethylated'!")
   }
 
-  # check input argumen
+  # check input argument
   if (missing(MM_object)) {
     stop("Please input an MethMotif_object using 'MM_object = '!")
   } else if (class(MM_object)[1] != "MethMotif") {
-    stop("Your input is not a MethMotif obejct. Try to use searchMotif() function to return a MethMotif object for the TFBS of interest!")
+    stop("Your input is not a MethMotif object. Try to use searchMotif() function to return a MethMotif object for the TFBS of interest!")
   } else {
     # get beta score matrix and motif matrix
     MMBetaScore <- MM_object@MMBetaScore
@@ -45,7 +45,7 @@ plotLogo <- function(MM_object, logo_type = "entropy", meth_level = "all") {
     title_for_nPeaks <- paste0("Number of peaks with motif = ", nPeaks)
 
     if (!(is.na(MMBetaScore[1, 1]))) {
-      # generate a dataframe for beta score plotting
+      # generate a data.frame for beta score plotting
       plot_beta_score <- matrix(rep(0, length(MMBetaScore) * 3), ncol = 3)
       colnames(plot_beta_score) <- c("number", "pos", "meth")
       plot_beta_score[seq(1, motif_length, 1), 1] <- as.vector(MMBetaScore[3, ])
@@ -107,44 +107,49 @@ plotLogo <- function(MM_object, logo_type = "entropy", meth_level = "all") {
         order(plot_beta_score$meth, decreasing = FALSE),
       ]
       plot_data$number <- as.numeric(as.character(plot_beta_score$number))
-      p1 <- ggplot(data = plot_data, aes(x = pos, y = number, fill = meth)) +
-        geom_bar(colour = "black", stat = "identity") +
-        scale_fill_manual(values = barplot_color) +
+      p1 <- ggplot2::ggplot(
+        data = plot_data,
+        ggplot2::aes(x = pos, y = number, fill = meth)
+      ) +
+        ggplot2::geom_bar(colour = "black", stat = "identity") +
+        ggplot2::scale_fill_manual(values = barplot_color) +
         ylim(0, ylim) +
-        theme(
-          axis.title.y = element_blank(),
-          axis.title.x = element_blank(),
-          axis.text.y = element_blank(),
-          axis.ticks.y = element_blank(),
-          axis.ticks.x = element_blank(),
-          axis.text.x = element_blank(),
-          legend.title = element_blank(),
-          legend.background = element_blank(),
-          legend.box.background = element_rect(colour = "black"),
+        ggplot2::theme(
+          axis.title.y = ggplot2::element_blank(),
+          axis.title.x = ggplot2::element_blank(),
+          axis.text.y = ggplot2::element_blank(),
+          axis.ticks.y = ggplot2::element_blank(),
+          axis.ticks.x = ggplot2::element_blank(),
+          axis.text.x = ggplot2::element_blank(),
+          legend.title = ggplot2::element_blank(),
+          legend.background = ggplot2::element_blank(),
+          legend.box.background = ggplot2::element_rect(colour = "black"),
           legend.key.size = unit(0.8, "line"),
           legend.position = c(0.9, 0.9),
-          plot.margin = margin(t = 10, r = 20, b = 0, l = 35, unit = "pt"),
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          panel.background = element_blank(),
-          plot.title = element_text(hjust = 0.5, size = 10)
+          plot.margin = ggplot2::margin(
+            t = 10, r = 20, b = 0, l = 35, unit = "pt"
+          ),
+          panel.grid.major = ggplot2::element_blank(),
+          panel.grid.minor = ggplot2::element_blank(),
+          panel.background = ggplot2::element_blank(),
+          plot.title = ggplot2::element_text(hjust = 0.5, size = 10)
         ) +
-        stat_summary(
+        ggplot2::stat_summary(
           fun = sum,
-          aes(label = after_stat(sum_of_pos$sum), group = pos),
+          aes(label = ggplot2::after_stat(sum_of_pos$sum), group = pos),
           geom = "text",
           vjust = -0.5
         ) +
-        ggtitle(title_for_nPeaks)
+        ggplot2::ggtitle(title_for_nPeaks)
     } else {
-      p1 <- ggplot() +
-        theme(
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          panel.background = element_blank(),
-          plot.title = element_text(hjust = 0.5, size = 10)
+      p1 <- ggplot2::ggplot() +
+        ggplot2::theme(
+          panel.grid.major = ggplot2::element_blank(),
+          panel.grid.minor = ggplot2::element_blank(),
+          panel.background = ggplot2::element_blank(),
+          plot.title = ggplot2::element_text(hjust = 0.5, size = 10)
         ) +
-        ggtitle(title_for_nPeaks)
+        ggplot2::ggtitle(title_for_nPeaks)
       pdf_name <- paste0(ID, "-logo-", logo_type, ".pdf")
     }
 
@@ -156,21 +161,23 @@ plotLogo <- function(MM_object, logo_type = "entropy", meth_level = "all") {
       xlab_size <- -0.5 * motif_length + 24
     }
     #plot motif logo
-    p2 <- ggplot() +
-      geom_logo(data = motif_matrix, method = logo_method) +
-      theme(
-        axis.title.y = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.text.x = element_text(size = xlab_size),
-        plot.margin = margin(t = 0, r = 0, b = 0, l = 0, unit =  "pt"),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.background = element_blank()
+    p2 <- ggplot2::ggplot() +
+      suppressWarnings(
+        ggseqlogo::geom_logo(data = motif_matrix, method = logo_method)
       ) +
-      ylim(0, y_max)
+      ggplot2::theme(
+        axis.title.y = ggplot2::element_blank(),
+        axis.ticks.x = ggplot2::element_blank(),
+        axis.text.x = ggplot2::element_text(size = xlab_size),
+        plot.margin = ggplot2::margin(t = 0, r = 0, b = 0, l = 0, unit =  "pt"),
+        panel.grid.major = ggplot2::element_blank(),
+        panel.grid.minor = ggplot2::element_blank(),
+        panel.background = ggplot2::element_blank()
+      ) +
+      ggplot2::ylim(0, y_max)
 
     #combine p1 and p2 together
-    p3 <- grid.arrange(p1, p2, nrow = 2)
+    p3 <- gridExtra::grid.arrange(p1, p2, nrow = 2)
     pdf(pdf_name)
     plot(p3)
     dev.off()
