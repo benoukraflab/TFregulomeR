@@ -17,20 +17,21 @@
 #' @examples
 #' TFBS_brain <- dataBrowser(organ = "brain")
 
-dataBrowser <- function(species, organ, sample_type, cell_tissue_name,
-                        tf, disease_state, source, server = "ca",
-                        TFregulome_url, local_db_path = NULL) {
+dataBrowser <- function(
+  species, organ, sample_type, cell_tissue_name, tf, disease_state, source,
+  server = "ca", TFregulome_url, local_db_path = NULL
+) {
   # build api_object
   api_object <- .construct_api(server, TFregulome_url, local_db_path)
 
   query_index <- rep(0, 7)
   query_value <- rep("", 7)
-  names(query_index) <- c("species", "organ", "sample_type",
-                          "cell_or_tissue_name",
-                          "tf", "disease_state", "source")
-  names(query_value) <- c("species", "organ", "sample_type",
-                          "cell_or_tissue_name",
-                          "tf", "disease_state", "source")
+  query_terms <- c(
+    "species", "organ", "sample_type", "cell_or_tissue_name",
+    "tf", "disease_state", "source"
+  )
+  names(query_index) <- query_terms
+  names(query_value) <- query_terms
   if (!missing(species)) {
     query_index["species"] <- 1
     query_value["species"] <- paste0("species=", species)
@@ -45,8 +46,9 @@ dataBrowser <- function(species, organ, sample_type, cell_tissue_name,
   }
   if (!missing(cell_tissue_name)) {
     query_index["cell_tissue_name"] <- 1
-    query_value["cell_tissue_name"] <- paste0("cell_tissue_name=",
-                                               cell_tissue_name)
+    query_value["cell_tissue_name"] <- paste0(
+      "cell_tissue_name=", cell_tissue_name
+    )
   }
   if (!missing(tf)) {
     query_index["tf"] <- 1
