@@ -41,7 +41,9 @@ greatAnnotate <- function(
   great_adv_twoDistance = 1000.0,
   great_adv_oneDistance = 1000.0,
   request_interval = 60,
-  great_version = "4.0.4"
+  great_version = "4.0.4",
+  cores = 1,
+  local_version = FALSE
 ) {
   # check input arguments
   if (missing(peaks)) {
@@ -67,6 +69,14 @@ greatAnnotate <- function(
   }
   if (!(great_rule %in% c("basalPlusExt", "twoClosest", "oneClosest"))) {
     stop("According to 'rGREAT', 'great_rule' shoule be 'basalPlusExt' (default), 'twoClosest', or 'oneClosest'!")
+  }
+  if (is.double(cores)) {
+    cores <- as.integer(cores)
+  } else if (!is.integer(cores)) {
+    stop("'cores' should be an integer no greater than the core count of your CPU!")
+  }
+  if (!is.logical(local_version)) {
+    stop("'local_version' should be either TRUE (T) or FALSE (F, default)")
   }
   # check loaded package
   if (!("rGREAT" %in% (.packages()))) {
@@ -98,50 +108,103 @@ greatAnnotate <- function(
   peaks$id <- paste0("greatAnnotate_peak_", as.vector(rownames(peaks)))
   # great analysis
   message("... ... start GREAT analysis")
-  if (great_rule == "basalPlusExt") {
-    jobs <- suppressMessages(rGREAT::submitGreatJob(
-      gr = peaks, species = assembly, rule = great_rule,
-      adv_upstream = great_adv_upstream, adv_downstream = great_adv_downstream,
-      adv_span = great_adv_span, request_interval = request_interval,
-      version = great_version
-    ))
-  } else if (great_rule == "twoClosest") {
-    jobs <- suppressMessages(rGREAT::submitGreatJob(
-      gr = peaks, species = assembly, rule = great_rule,
-      adv_twoDistance = great_adv_twoDistance,
-      request_interval = request_interval, version = great_version
-    ))
+  if (local_version) {
+    peaks.gr <- GenomicRanges::GRanges(
+      peaks$chr,
+      IRanges::IRanges(peaks$start, peaks$end),
+      id = peaks$id
+    )
+    if (assembly %in% c("hg38", "hg19")) {
+      gap_chromo <- paste0("chr", c(1:22, "X", "Y"))
+    } else if (assembly %in% c("mm10", "mm9")) {
+      gap_chromo <- paste0("chr", c(1:19, "X", "Y"))
+    }
+    gap <- rGREAT::getGapFromUCSC(assembly, gap_chromo)
+    great_gene_sets <- c("GO:BP", "GO:CC", "GO:MF")
+    # multiple by 1000 to convert from Kb to base pairs
+    # local rgreat takes base pairs while the submission takes Kb
+    jobs <- lapply(
+      great_gene_sets, local_great, peaks = peaks.gr,
+      assembly = assembly, great_rule = great_rule,
+      great_adv_upstream = great_adv_upstream * 1000,
+      great_adv_downstream = great_adv_downstream * 1000,
+      great_adv_span = great_adv_span * 1000,
+      great_adv_twoDistance = great_adv_twoDistance * 1000,
+      great_adv_oneDistance = great_adv_oneDistance * 1000,
+      cores = cores, gap = gap
+    )
   } else {
-    jobs <- suppressMessages(rGREAT::submitGreatJob(
-      gr = peaks, species = assembly, rule = great_rule,
-      adv_oneDistance = great_adv_oneDistance,
-      request_interval = request_interval, version = great_version
-    ))
+    if (great_rule == "basalPlusExt") {
+      jobs <- suppressMessages(rGREAT::submitGreatJob(
+        gr = peaks, species = assembly, rule = great_rule,
+        adv_upstream = great_adv_upstream,
+        adv_downstream = great_adv_downstream, adv_span = great_adv_span,
+        request_interval = request_interval, version = great_version
+      ))
+    } else if (great_rule == "twoClosest") {
+      jobs <- suppressMessages(rGREAT::submitGreatJob(
+        gr = peaks, species = assembly, rule = great_rule,
+        adv_twoDistance = great_adv_twoDistance,
+        request_interval = request_interval, version = great_version
+      ))
+    } else {
+      jobs <- suppressMessages(rGREAT::submitGreatJob(
+        gr = peaks, species = assembly, rule = great_rule,
+        adv_oneDistance = great_adv_oneDistance,
+        request_interval = request_interval, version = great_version
+      ))
+    }
   }
 
   message("... ... getting enrichment tables")
-  tb <- suppressMessages(rGREAT::getEnrichmentTables(jobs))
-  handle_enrichment_table <- function(gene_set, test, pvalue) {
+  if (local_version) {
+    get_enrichment <- function(job) {
+      suppressMessages(rGREAT::getEnrichmentTables(job))
+    }
+    tb <- lapply(jobs, get_enrichment)
+    names(tb) <- c(
+      "Biological Process", "Cellular Component", "Molecular Function"
+    )
+  } else {
+    tb <- suppressMessages(rGREAT::getEnrichmentTables(jobs))
+  }
+  handle_enrichment_table <- function(gene_set, test, pvalue, local_version) {
     go_tb <- tb[[gene_set]]
-    if (test == "binomial") {
-      go_tb <- go_tb %>%
-        dplyr::select(ID, name, Hyper_Observed_Gene_Hits, Binom_Adjp_BH) %>%
-        dplyr::rename(p_adjust = Binom_Adjp_BH)
+    if (local_version) {
+      if (test == "binomial") {
+        go_tb <- go_tb %>%
+          dplyr::select(id, description, observed_gene_hits, p_adjust)
+      } else {
+        go_tb <- go_tb %>%
+          dplyr::select(id, description, observed_gene_hits, p_adjust_hyper) %>%
+          dplyr::rename(p_adjust = p_adjust_hyper)
+      }
     } else {
-      go_tb <- go_tb %>%
-        dplyr::select(ID, name, Hyper_Observed_Gene_Hits, Hyper_Adjp_BH) %>%
-        dplyr::rename(p_adjust = Hyper_Adjp_BH)
+      if (test == "binomial") {
+        go_tb <- go_tb %>%
+          dplyr::select(ID, name, Hyper_Observed_Gene_Hits, Binom_Adjp_BH) %>%
+          dplyr::rename(p_adjust = Binom_Adjp_BH)
+      } else {
+        go_tb <- go_tb %>%
+          dplyr::select(ID, name, Hyper_Observed_Gene_Hits, Hyper_Adjp_BH) %>%
+          dplyr::rename(p_adjust = Hyper_Adjp_BH)
+      }
     }
     go_tb_sorted_pass <- go_tb %>%
-      dplyr::arrange(p_adjust) %>%
       dplyr::filter(p_adjust < pvalue) %>%
-      dplyr::mutate(go_id = substring(gene_set, first = 4)) %>%
+      dplyr::arrange(p_adjust) %>%
+      dplyr::mutate(go_id = gene_set) %>%
       dplyr::select(go_id, dplyr::everything())
     go_tb_sorted_pass
   }
 
+  # added to align the names between local and submitted rgreat
+  if (!local_version) {
+    names(tb) <- substring(names(tb), first = 4)
+  }
   filtered_tb <- lapply(
-    names(tb), handle_enrichment_table, test = test, pvalue = pvalue
+    names(tb), handle_enrichment_table, test = test, pvalue = pvalue,
+    local_version = local_version
   )
 
   all <- do.call(rbind, filtered_tb)
@@ -196,7 +259,7 @@ formHTMLoutput <- function(all, report_prefix) {
       # title = "GREAT analysis",
       x = "-log10(adjusted p-value)",
       y = "Number of genes",
-      color = "GO Geneset"
+      color = "GO Gene set"
     ) +
     ggplot2::theme_bw() +
     ggplot2::theme(legend.position = "none")
@@ -209,12 +272,15 @@ formHTMLoutput <- function(all, report_prefix) {
   )
 
   filter_bar <- crosstalk::filter_checkbox(
-    "go_id", "Go Geneset", shared_all, ~go_id, inline = TRUE
+    "go_id", "Go Gene set", shared_all, ~go_id, inline = TRUE
   )
 
   dt_table <- DT::datatable(
     shared_all,
     width = "100%",
+    colnames = c(
+      "Gene set", "ID", "Description", "Observed gene hits", "Adjusted p-value"
+    ),
     rownames = FALSE,
     extensions = "Buttons",
     options = list(
@@ -263,4 +329,58 @@ formHTMLoutput <- function(all, report_prefix) {
   )
 
   return(html_page)
+}
+
+local_great <- function(
+  gene_set, peaks, assembly, great_rule, great_adv_upstream,
+  great_adv_downstream, great_adv_span, great_adv_twoDistance,
+  great_adv_oneDistance, cores, gap
+) {
+  if (great_rule == "basalPlusExt") {
+    result <- rGREAT::great(
+      gr = peaks, gene_sets = gene_set,
+      tss_source = paste0("txdb:", assembly),
+      mode = great_rule,
+      basal_upstream = great_adv_upstream,
+      basal_downstream = great_adv_downstream,
+      extension = great_adv_span,
+      cores = cores,
+      exclude = gap
+    )
+  } else if (great_rule == "twoClosest") {
+    result <- rGREAT::great(
+      gr = peaks, gene_sets = gene_set,
+      tss_source = paste0("txdb:", assembly),
+      mode = great_rule,
+      extension = great_adv_twoDistance,
+      cores = cores,
+      exclude = gap
+    )
+  } else {
+    result <- rGREAT::great(
+      gr = peaks, gene_sets = gene_set,
+      tss_source = paste0("txdb:", assembly),
+      mode = great_rule,
+      extension = great_adv_oneDistance,
+      cores = cores,
+      exclude = gap
+    )
+  }
+  n_gene_total <- length(unique(result@extended_tss$gene_id))
+  result@table$p_value_hyper <- exp(phyper(
+    result@table$observed_gene_hits - 1,
+    result@table$gene_set_size,
+    n_gene_total - result@table$gene_set_size,
+    result@n_gene_gr,
+    lower.tail = FALSE,
+    log.p = TRUE
+  ))
+  result@table$p_value <- exp(pbinom(
+    result@table$observed_region_hits - 1,
+    result@n_total,
+    result@table$genome_fraction,
+    lower.tail = FALSE,
+    log.p = TRUE
+  ))
+  return(result)
 }
