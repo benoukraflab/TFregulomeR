@@ -224,8 +224,8 @@ interactome3D <- function(
         yLabel: \"TF-y\",
         zLabel: '", z_value_label, "',
         legendLabel: \"co-binding(%)\",
-        xStep: 5,
-        yStep: 5,
+        xStep: 1,
+        yStep: 1,
         zMin: 0,
         xValueLabel: function(value) {
            var x_name = [", x_value, "];
