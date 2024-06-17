@@ -56,7 +56,7 @@ searchMotif <- function(id, motif_format = "MEME",
     request_content_df <- apiRequest(api_object,  id = id)
   }
   # check db output
-  if (is.null(request_content_df)) {
+  if (is.null(request_content_df) || nrow(request_content_df) == 0) {
     return(NULL)
   } else {
     message("There are a matched record exported in a MethMotif object.")
