@@ -59,7 +59,7 @@ interactome3D <- function(
   } else {
     message("... You chose NOT to report TF interactome coupled with external source signal ...")
   }
-  if (return_interactome_with_mCpG == FALSE && return_interactome_with_external_source == FALSE) {
+  if (!return_interactome_with_mCpG && !return_interactome_with_external_source) {
     message("... You chose no action. EXIT!!")
     return(NULL)
   }
@@ -119,12 +119,12 @@ interactome3D <- function(
 
   if (return_interactome_with_mCpG) {
     # TF interactome with mCpG
-    TF_intersection_with_mCpG_json <- get.jsondata(
+    TF_intersection_with_mCpG_json <- .get_json_data(
       TF_intersection_matrix_hc, TF_mCpG_matrix_hc
     )
-    x_value <- get.names(rownames(TF_intersection_matrix_hc))
-    y_value <- get.names(colnames(TF_intersection_matrix_hc))
-    html_report_mCpG <- html_3d.report(
+    x_value <- .get_names(rownames(TF_intersection_matrix_hc))
+    y_value <- .get_names(colnames(TF_intersection_matrix_hc))
+    html_report_mCpG <- .html_3d_report(
       TF_intersection_with_mCpG_json, x_value,
       y_value, "mCpG"
     )
@@ -133,14 +133,14 @@ interactome3D <- function(
   }
 
   if (return_interactome_with_external_source) {
-    # TF interactome with external source signal jsondata
-    TF_intersection_with_external_source_json <- get.jsondata(
+    # TF interactome with external source signal json_data
+    TF_intersection_with_external_source_json <- .get_json_data(
       TF_intersection_matrix_hc,
       TF_external_source_matrix_hc
     )
-    x_value <- get.names(rownames(TF_intersection_matrix_hc))
-    y_value <- get.names(colnames(TF_intersection_matrix_hc))
-    html_report_external_source <- html_3d.report(
+    x_value <- .get_names(rownames(TF_intersection_matrix_hc))
+    y_value <- .get_names(colnames(TF_intersection_matrix_hc))
+    html_report_external_source <- .html_3d_report(
       TF_intersection_with_external_source_json,
       x_value, y_value, "external_source"
     )
@@ -160,8 +160,8 @@ interactome3D <- function(
   return(res)
 }
 
-get.jsondata <- function(intersection_table, z_table) {
-  jsondata <- "[\n"
+.get_json_data <- function(intersection_table, z_table) {
+  json_data <- "[\n"
   for (i in seq(0, nrow(intersection_table) - 1, 1)) {
     for (j in seq(0, ncol(intersection_table) - 1, 1)) {
       intersection_value <- intersection_table[i + 1, j + 1]
@@ -169,25 +169,25 @@ get.jsondata <- function(intersection_table, z_table) {
       if (is.na(z_value)) {
         z_value <- -1
       }
-      jsondata <- paste0(jsondata, "{x:", i, ",y:", j, ",z:", z_value, ",style:", intersection_value, "},\n")
+      json_data <- paste0(json_data, "{x:", i, ",y:", j, ",z:", z_value, ",style:", intersection_value, "},\n")
     }
   }
-  jsondata <- paste0(jsondata, "];\n")
+  json_data <- paste0(json_data, "];\n")
 }
 
-get.names <- function(namelist) {
-  namelist_new <- unlist(lapply(
-    namelist,
+.get_names <- function(name_list) {
+  name_list_new <- unlist(lapply(
+    name_list,
     function(x) tail(unlist(strsplit(x, split = "_")), 1)
   ))
-  namelist_new_str <- paste0("'", paste(namelist_new, collapse = "','"), "'")
+  paste0("'", paste(name_list_new, collapse = "','"), "'")
 }
 
-html_3d.report <- function(jsondata, x_value, y_value, data_type) {
+.html_3d_report <- function(json_data, x_value, y_value, data_type) {
   if (data_type == "mCpG") {
-    z_value_lable <- "mCpGs(%)"
+    z_value_label <- "mCpGs(%)"
   } else {
-    z_value_lable <- "external source signal"
+    z_value_label <- "external source signal"
   }
   html_3d_res <- paste0("<!DOCTYPE>
 <html>
@@ -202,13 +202,13 @@ html_3d.report <- function(jsondata, x_value, y_value, data_type) {
     }
 
   </style>
-  <script type=\"text/javascript\" src=\"https://bioinfo-csi.nus.edu.sg/methmotif/interactome/js/vis.min.js\"></script>
+  <script type=\"text/javascript\" src=\"https://unpkg.com/vis-graph3d@latest/dist/vis-graph3d.min.js\"></script>
 
   <script type=\"text/javascript\">
     var data = null;
     var graph = null;
     function drawVisualization() {
-      var data = ", jsondata, "
+      var data = ", json_data, "
       // specify options
       var options = {
         width:  '90%',
@@ -222,7 +222,7 @@ html_3d.report <- function(jsondata, x_value, y_value, data_type) {
         showLegend:true,
         xLabel: \"TF-x\",
         yLabel: \"TF-y\",
-        zLabel: '", z_value_lable, "',
+        zLabel: '", z_value_label, "',
         legendLabel: \"co-binding(%)\",
         xStep: 5,
         yStep: 5,
@@ -235,15 +235,24 @@ html_3d.report <- function(jsondata, x_value, y_value, data_type) {
            var y_name = [", y_value, "];
            return y_name[value];
         },
-      tooltip: function (point) {
+        tooltip: function (point) {
           var x_name = [", x_value, "];
           var y_name = [", y_value, "];
-          var output = 'TF-x: <b>'+x_name[point.x]+'</b><br>TF-y: <b>'+y_name[point.y]+'</b><br>", z_value_lable, ": '+point.z;
+          var output = 'TF-x: <b>'+x_name[point.x]+'</b><br>TF-y: <b>'+y_name[point.y]+'</b><br>", z_value_label, ": '+point.z;
           return output;
         },
       };
       var container = document.getElementById('mygraph');
-      graph = new vis.Graph3d(container, data, options);
+      let graph = new vis.Graph3d(container, data, options);
+      // https://github.com/visjs/vis-graph3d/issues/1064
+      graph._onMouseUp = function (event) {
+        this.frame.style.cursor = \"auto\";
+        this.leftButtonDown = false;
+        // remove event listeners here
+        document.removeEventListener(\"mousemove\", this.onmousemove);
+        document.removeEventListener(\"mouseup\", this.onmouseup);
+        event.preventDefault();
+      };
 
     }
   </script>
