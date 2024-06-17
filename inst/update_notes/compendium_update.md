@@ -1,10 +1,22 @@
-## Current TFBSs in TFregulomeR compendium v2.0.0
-What's new in the version v2.0.0 - 5 March 2019:
+## Current TFBSs in TFregulomeR compendium v2.3.0
+What's new in the version v2.3.0 - 16 April 2024:
 
-1) 865 PWMs in mouse were added (For Canada server; for Singapore server coming soon).
+1) In order to shrink the size of the local database all files are individually gzipped before the directories are zipped. This provides a major reduction in local database size with a negligible hit to performance.
 
 
 ## Previous TFregulomeR data compendium 
+### version: v2.2.0 - 19 December 2023
+What's new in the version v2.2.0
+1) All MEME files were reformated and updated to reflect all peaks with a identified motif and not just a subset peaks with an identified motif.
+2) TRANSFAC files were updated alongside the MEME overhaul.
+### version: v2.1.0 - 24 April 2023
+What's new in the version v2.1.0
+1) Converted data compendium file structure into zipped folder for local storage.
+2) Built an SQLite file to mirror the online MySQL database leveraged within the MethMotif server.
+3) Packaged the zipped compendium and SQLite database into a local version of the TFregulome database found [here](https://methmotif.org/API_TFregulomeR/downloads/).
+### version: v2.0.0 - 5 March 2020
+What's new in the version v2.0.0
+1) 865 PWMs in mouse were added (For Canada server; for Singapore server coming soon).
 ### version: 1.2.0 - 6 September 2019
 What's new in the version v1.2.0
 1) More detailed information about motifs added: i) consistency with the existing databases (HOCOMOCO and JASPAR); ii) correlation of the motifs identified by different motif callers, MEME-ChIP and HOMER, if not consistent or not recorded in the databases.

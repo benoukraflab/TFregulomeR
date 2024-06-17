@@ -8,16 +8,17 @@
 
 TFregulomeR
 
-v2.1.0
+v2.3.3
 
 [![DOI](https://zenodo.org/badge/649837036.svg)](https://zenodo.org/badge/latestdoi/649837036)
 
 **changed to Canada server as default (Singapore server retired) compared to v2.0.1 (updated on April 17, 2022)**
 
 New features: 
-1. Link to data compendium hosted in Singapore and Canada;
-2. Link to TF motifs and DNA methylation in human and mouse;
-3. Perform TF interactome analysis coupled with DNA methylation and other chromatin signals such as chromatin accessibility.
+1. Link to data compendium hosted in Canada;
+2. Ability to download a local copy of the data compendium;
+3. Link to TF motifs and DNA methylation in human and mouse;
+4. Perform TF interactome analysis coupled with DNA methylation and other chromatin signals such as chromatin accessibility.
 
 # Introduction
 *TFregulomeR* comprises of a comprehensive compendium of transcription factor binding sites (TFBSs) derived from the MethMotif and GTRD, as well as the ready-to-use functionality in R language facilitating data access, integration and analysis. The binding motifs predicted in-silico from MethMotif and GTRD describe cell specific transcription factor (TF) binding propensities, while the DNA methylation profiles from MethMotif portray a second epigenetic dimension in TF binding events. The whole toolbox allows a better understanding of the TF binding propensities in a cell-specific manner. 
@@ -27,10 +28,10 @@ New features:
 ## Release notes
  This repository is TFregulomeR stable release 
 
- Current TFregulomeR stable version: 2.0.2 (Updated on 17 April 2022).
+ Current TFregulomeR stable version: 2.3.0 (Updated on 16 April 2024).
 
 
-### For development release, please visit [TFregulomeR-dev](https://github.com/linquynus/TFregulomeR-dev) 
+### For development release, please visit [TFregulomeR-dev](https://github.com/Matthew-Dyer792/tfregulomer-dev) 
 
 
 -------
@@ -41,10 +42,10 @@ You can check detailed package instructions in [Vignettes](https://methmotif.org
 
 -------
 
-## Current Functionalities v2.0.2
+## Current Functionalities v2.3.3
 ### Click [here](./inst/update_notes/functionality_update.md) for functionality update notes 
 
-_Currently, TFregulomeR links to data compendium hosted in Canada (default). Singapore server is no more accessible. for Canada server, please use `server='ca'`. For example, when browsing TFregulomeR data compendium hosted in Canada, using `dataBrowser(server='ca')`._
+_Currently, TFregulomeR links to data compendium hosted in Canada (default). Singapore server is no longer accessible. for Canada server, please use `server='ca'`. For example, when browsing TFregulomeR data compendium hosted in Canada, using `dataBrowser(server='ca')`._
 
 Note: new function is highlighted in bold font.
 
@@ -61,7 +62,7 @@ Note: new function is highlighted in bold font.
 11) Plot the TFBS distribution in a given list of peak sets (motifDistrib() & plotDistrib()).
 12) Annotate peak genomic locations (genomeAnnotate()).
 13) Annotate ontologies of target genes by a peak set (greatAnnotate()).
-14) Convert a motif matrix to a PFMatrix calss object for *TFBSTools* package (toTFBSTools()).
+14) Convert a motif matrix to a PFMatrix class object for *TFBSTools* package (toTFBSTools()).
 
 -------
 
@@ -69,7 +70,7 @@ Note: new function is highlighted in bold font.
 
  ### Click [here](./inst/update_notes/compendium_update.md) for TFregulomeR compendium update notes
 
-TFregulomeR data compendium version: 2.0.0
+TFregulomeR data compendium version: 2.3.3
 
 | Item     | Count |
 | :---------:|:------:|
@@ -88,6 +89,12 @@ TFregulomeR data compendium version: 2.0.0
 ## Citation
 
 Quy Xiao Xuan Lin, Denis Thieffry, Sudhakar Jha, Touati Benoukraf. (2019) **TFregulomeR reveals transcription factors’ context-specific features and functions.** _Nucleic Acids Res._, 10.1093/nar/gkz1088. [[Manuscript](https://doi.org/10.1093/nar/gkz1088)]
+
+-------
+
+## Methods paper
+
+Matthew Dyer, Denis Thieffry, Touati Benoukraf. (2024) **Leveraging the MethMotif toolkit to characterize context-specific features and roles of methylation sensitive transcription factors.** _in preparation_
 
 -------
 
@@ -121,7 +128,9 @@ The scripts of case studies used in our manuscript are available as below.
 2) Optional packages: the packages below are optional since they are required only in some functions or some options in a function
 
     - [rGREAT](https://bioconductor.org/packages/release/bioc/html/rGREAT.html) (>= 1.16.1): only requried in `greatAnnotate()`
-    - [rbokeh](https://cran.r-project.org/web/packages/rbokeh/index.html) (>= 0.5.0): only required when users opt to export an intuitive HTML report in `greatAnnotate()`
+    - [plotly](https://cran.r-project.org/web/packages/plotly/index.html) (>= 4.10.4): only required when users opt to export an intuitive HTML report in `greatAnnotate()`
+    - [crosstalk](https://cran.r-project.org/web/packages/crosstalk/index.html) (>= 1.2.1): only required when users opt to export an intuitive HTML report in `greatAnnotate()`
+    - [DT](https://cran.r-project.org/web/packages/DT/index.html) (>= 0.33): only required when users opt to export an intuitive HTML report in `greatAnnotate()`
     - [TxDb.Hsapiens.UCSC.hg38.knownGene](https://bioconductor.org/packages/release/data/annotation/html/TxDb.Hsapiens.UCSC.hg38.knownGene.html) (>= 3.4.0): only required when users opt to annotate hg38 peak locations in `genomeAnnotate()`
     - [TxDb.Hsapiens.UCSC.hg19.knownGene](https://bioconductor.org/packages/release/data/annotation/html/TxDb.Hsapiens.UCSC.hg19.knownGene.html) (>= 3.2.2): only required when users opt to annotate hg19 peak locations in `genomeAnnotate()`
     - [TxDb.Mmusculus.UCSC.mm10.knownGene](https://bioconductor.org/packages/release/data/annotation/html/TxDb.Mmusculus.UCSC.mm10.knownGene.html) (>= 3.4.4): only required when users opt to annotate mm10 peak locations in `genomeAnnotate()`
@@ -139,7 +148,7 @@ devtools::install_github("benoukraflab/TFregulomeR")
 ```
 The step above will automatically install the required packages. However, you still need to install optional packages if you opt to use the functions such as `greatAnnotate()`, `genomeAnnotate()` and `toTFBSTools()`.
 
-If you would like to query a local version of the TFregulomeR database to facilitate faster execution speeds download and unzip the file found [here](https://methmotif.org/API_TFregulomeR/TFregulomeR-database-2.1.zip).
+If you would like to query a local version of the TFregulomeR database to facilitate faster execution speeds download and unzip the file found [here](https://methmotif.org/API_TFregulomeR/downloads/).
 
 -------
 
