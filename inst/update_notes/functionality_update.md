@@ -1,6 +1,10 @@
 ## Current Functionalities v2.3.3 - 17 June 2024
 
-Along with an update to the function _greatAnnotate_ we have added the ability to run the GREAT analysis locally.
+1) Along with an update to the function _greatAnnotate_ we have added the ability to run the GREAT analysis locally.
+2) Updated the vis-graph3d javascript packaged used within the _interactome3D_.
+3) Fixed a bug in _interactome3D_ where only every 5th TF was labelled.
+4) Fixed a bug where a local database request returned an empty objected. 
+5) Fixed a bug present when user submitted peaks where provided to _intersectPeakMatrix_.
 
 ## Previous  Version
 ### Functionalities version 2.3.2 - 3 June 2024
