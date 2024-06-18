@@ -349,7 +349,6 @@ intersect_peak_regions <- function(x_info, y_info, external_source_provided, ext
   # subsetOverlaps may mis-think the two sets coming from different references, so suppressWarnings here
   suppressWarnings(bedx_with_bedy <- subsetByOverlaps(x_info$bed, y_info$bed))
   peakx_with_peaky <- unique(as.data.frame(bedx_with_bedy))
-  print(head(peakx_with_peaky))
   x_intersect_percentage <- 100 * nrow(peakx_with_peaky) / nrow(x_info$peak)
   MethMotif_x <- new('MethMotif')
   external_signal_in_x <- c(
