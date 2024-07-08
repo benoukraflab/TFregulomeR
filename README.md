@@ -8,7 +8,7 @@
 
 TFregulomeR
 
-v2.3.3
+v2.3.4
 
 [![DOI](https://zenodo.org/badge/649837036.svg)](https://zenodo.org/badge/latestdoi/649837036)
 
@@ -42,7 +42,7 @@ You can check detailed package instructions in [Vignettes](https://methmotif.org
 
 -------
 
-## Current Functionalities v2.3.3
+## Current Functionalities v2.3.4
 ### Click [here](./inst/update_notes/functionality_update.md) for functionality update notes 
 
 _Currently, TFregulomeR links to data compendium hosted in Canada (default). Singapore server is no longer accessible. for Canada server, please use `server='ca'`. For example, when browsing TFregulomeR data compendium hosted in Canada, using `dataBrowser(server='ca')`._
