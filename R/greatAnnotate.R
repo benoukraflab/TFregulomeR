@@ -78,13 +78,20 @@ greatAnnotate <- function(
   if (!is.logical(local_version)) {
     stop("'local_version' should be either TRUE (T) or FALSE (F, default)")
   }
-  # check loaded package
-  if (!("rGREAT" %in% (.packages()))) {
-    stop("GREAT R package 'rGREAT' (>=1.16.1) is NOT loaded yet!")
+  # check that the required packages can be loaded
+  # this step maybe unnecessary as I have the packages declared when called
+  if (!require("rGREAT", quietly = TRUE)) {
+    stop("GREAT R package 'rGREAT' (>=1.16.1) is NOT installed!")
   }
-  # if (return_html_report && !("rbokeh" %in% (.packages()))) {
-  #   stop("A dynamic html report requires 'rbokeh' pakcage (>=0.5.0). 'rbokeh' is NOT loaded yet!")
-  # }
+  if (return_html_report && !require("plotly", quietly = TRUE)) {
+    stop("A dynamic html report requires 'plotly' (>= 4.10.4). 'plotly' is NOT installed!")
+  }
+  if (return_html_report && !require("crosstalk", quietly = TRUE)) {
+    stop("A dynamic html report requires 'crosstalk' (>= 1.2.1). 'crosstalk' is NOT installed!")
+  }
+  if (return_html_report && !require("DT", quietly = TRUE)) {
+    stop("A dynamic html report requires 'DT' (>= 0.33). 'DT' is NOT installed!")
+  }
 
   #message
   message("Start greatAnnotate ...")

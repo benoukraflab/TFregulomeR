@@ -46,18 +46,18 @@ genomeAnnotate <- function(peaks, assembly = "hg38", return_annotation = FALSE,
   if (!is.vector(TTS_range)) {
     stop("'TTS_range' should be a numric vector, by default c(-100, 1000)")
   }
-  # check loaded package
-  if (assembly == "hg38" && !("TxDb.Hsapiens.UCSC.hg38.knownGene" %in% (.packages()))) {
-    stop("R package 'TxDb.Hsapiens.UCSC.hg38.knownGene' (>=3.4.0) is NOT loaded yet!")
+  # check that the required packages can be loaded
+  if (assembly == "hg38" && !require("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE)) {
+    stop("R package 'TxDb.Hsapiens.UCSC.hg38.knownGene' (>=3.4.0) is NOT installed!")
   }
-  if (assembly == "hg19" && !("TxDb.Hsapiens.UCSC.hg19.knownGene" %in% (.packages()))) {
-    stop("R package 'TxDb.Hsapiens.UCSC.hg19.knownGene' (>=3.2.2) is NOT loaded yet!")
+  if (assembly == "hg19" && !require("TxDb.Hsapiens.UCSC.hg19.knownGene", quietly = TRUE)) {
+    stop("R package 'TxDb.Hsapiens.UCSC.hg19.knownGene' (>=3.2.2) is NOT installed!")
   }
-  if (assembly == "mm10" && !("TxDb.Mmusculus.UCSC.mm10.knownGene" %in% (.packages()))) {
-    stop("R package 'TxDb.Mmusculus.UCSC.mm10.knownGene' (>=3.4.4) is NOT loaded yet!")
+  if (assembly == "mm10" && !require("TxDb.Mmusculus.UCSC.mm10.knownGene", quietly = TRUE)) {
+    stop("R package 'TxDb.Mmusculus.UCSC.mm10.knownGene' (>=3.4.4) is NOT installed!")
   }
-  if (assembly == "mm9" && !("TxDb.Mmusculus.UCSC.mm9.knownGene" %in% (.packages()))) {
-    stop("R package 'TxDb.Mmusculus.UCSC.mm9.knownGene' (>=3.2.2) is NOT loaded yet!")
+  if (assembly == "mm9" && !require("TxDb.Mmusculus.UCSC.mm9.knownGene", quietly = TRUE)) {
+    stop("R package 'TxDb.Mmusculus.UCSC.mm9.knownGene' (>=3.2.2) is NOT installed!")
   }
 
   #message
